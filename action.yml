@@ -6,9 +6,12 @@ inputs:
   command:
     description: >
       Operation to perform. Blue reads: get-market, get-market-params,
-      get-position, list-markets. Vault reads: vault-info, vault-balance.
-      Blue writes: supply, withdraw, supply-collateral, borrow, repay.
-      Vault writes: vault-deposit, vault-withdraw.
+      get-position, list-markets, get-allowance. Vault reads: vault-info,
+      vault-balance, list-vaults. Blue writes: supply, withdraw,
+      supply-collateral, withdraw-collateral, borrow, repay, liquidate,
+      accrue-interest, create-market, set-authorization. Vault writes:
+      vault-deposit, vault-withdraw, vault-redeem. Helpers: approve,
+      wrap-eth, unwrap-eth.
     required: true
   network:
     description: 'Blockchain network (ethereum, base, arbitrum, polygon, optimism)'
@@ -67,6 +70,28 @@ inputs:
     required: false
   owner:
     description: 'Share owner for vault withdrawals'
+    required: false
+
+  # Liquidation
+  borrower:
+    description: 'Borrower address for liquidation'
+    required: false
+  seized-assets:
+    description: 'Amount of collateral to seize in liquidation'
+    required: false
+
+  # Authorization
+  authorized:
+    description: 'Address to authorize for set-authorization'
+    required: false
+  is-authorized:
+    description: 'true to authorize, false to revoke'
+    required: false
+    default: 'true'
+
+  # Vault redeem
+  shares:
+    description: 'Vault shares for redeem command'
     required: false
 
   # List controls

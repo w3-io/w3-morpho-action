@@ -330,6 +330,84 @@ export async function getVaultBalance(vaultAddress, user, network, { rpcUrl } = 
   }
 }
 
+/**
+ * List MetaMorpho vaults from the Morpho GraphQL API.
+ */
+export async function listVaults(network, { first = 20 } = {}) {
+  const config = NETWORKS[network?.toLowerCase()]
+  if (!config) {
+    throw new MorphoError(
+      'UNSUPPORTED_NETWORK',
+      `Network "${network}" not supported. Available: ${Object.keys(NETWORKS).join(', ')}`,
+    )
+  }
+
+  const query = `{
+    vaults(first: ${first}, where: { chainId_in: [${config.chainId}] }, orderBy: TotalAssetsUsd, orderDirection: Desc) {
+      items {
+        address
+        name
+        symbol
+        asset { symbol address decimals }
+        state {
+          totalAssetsUsd
+          apy
+        }
+      }
+    }
+  }`
+
+  const json = await request(MORPHO_API_URL, {
+    method: 'POST',
+    body: { query },
+  })
+
+  const items = json?.data?.vaults?.items || []
+
+  return {
+    network,
+    count: items.length,
+    vaults: items.map((v) => ({
+      address: v.address,
+      name: v.name,
+      symbol: v.symbol,
+      asset: v.asset?.symbol || 'unknown',
+      totalAssetsUsd: v.state?.totalAssetsUsd ? `$${Number(v.state.totalAssetsUsd).toFixed(0)}` : '$0',
+      apy: v.state?.apy ? `${(Number(v.state.apy) * 100).toFixed(2)}%` : '0%',
+    })),
+  }
+}
+
+// ── Read: ERC20 allowance ─────────────────────────────────────────
+
+/**
+ * Check ERC20 allowance for Morpho Blue or a vault.
+ */
+export async function getAllowance(token, owner, { spender, network, rpcUrl }) {
+  if (!token) throw new MorphoError('MISSING_TOKEN', 'token address is required')
+  if (!owner) throw new MorphoError('MISSING_USER', 'owner address is required')
+
+  const net = resolveNetwork(network, rpcUrl)
+  const target = spender || MORPHO_BLUE
+
+  const allowance = unwrapBridgeResult(
+    await bridge.chain('ethereum', 'read-contract', {
+      contract: token,
+      method: 'function allowance(address, address) returns (uint256)',
+      args: [owner, target],
+      ...net.params,
+    }, net.network),
+  )
+
+  return {
+    token,
+    owner,
+    spender: target,
+    allowance: String(allowance),
+    network,
+  }
+}
+
 // ── Write: WETH wrapping ──────────────────────────────────────────
 
 const WETH_ADDRESSES = {
@@ -357,6 +435,33 @@ export async function wrapEth({ amount, network, rpcUrl }) {
     method: 'function deposit()',
     args: [],
     value: amount,
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    weth,
+    amount,
+    network,
+  }
+}
+
+/**
+ * Unwrap WETH back to native ETH.
+ */
+export async function unwrapEth({ amount, network, rpcUrl }) {
+  if (!amount) throw new MorphoError('MISSING_AMOUNT', 'amount in wei is required')
+
+  const net = resolveNetwork(network, rpcUrl)
+  const weth = WETH_ADDRESSES[network.toLowerCase()]
+  if (!weth) {
+    throw new MorphoError('UNSUPPORTED_NETWORK', `No WETH address for ${network}`)
+  }
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: weth,
+    method: 'function withdraw(uint256)',
+    args: [amount],
     ...net.params,
   }, net.network)
 
@@ -537,6 +642,93 @@ export async function repay(marketParams, { assets, onBehalf, network, rpcUrl })
   }
 }
 
+/**
+ * Liquidate an unhealthy position.
+ */
+export async function liquidate(marketParams, { borrower, seizedAssets, network, rpcUrl }) {
+  if (!borrower) throw new MorphoError('MISSING_BORROWER', 'borrower address is required')
+  if (!seizedAssets) throw new MorphoError('MISSING_AMOUNT', 'seized-assets is required')
+
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: MORPHO_BLUE,
+    method: 'liquidate',
+    abi: MORPHO_ABI,
+    args: [formatMarketParams(marketParams), borrower, seizedAssets, '0', '0x'],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    borrower,
+    seizedAssets,
+    network,
+  }
+}
+
+/**
+ * Force interest accrual on a market for accurate reads.
+ */
+export async function accrueInterest(marketParams, { network, rpcUrl }) {
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: MORPHO_BLUE,
+    method: 'function accrueInterest((address, address, address, address, uint256))',
+    args: [formatMarketParams(marketParams)],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    network,
+  }
+}
+
+/**
+ * Create a new Morpho Blue market.
+ */
+export async function createMarket(marketParams, { network, rpcUrl }) {
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: MORPHO_BLUE,
+    method: 'function createMarket((address, address, address, address, uint256))',
+    args: [formatMarketParams(marketParams)],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    marketParams,
+    network,
+  }
+}
+
+/**
+ * Authorize another address to manage positions on your behalf.
+ */
+export async function setAuthorization({ authorized, isAuthorized, network, rpcUrl }) {
+  if (!authorized) throw new MorphoError('MISSING_ADDRESS', 'authorized address is required')
+
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: MORPHO_BLUE,
+    method: 'function setAuthorization(address, bool)',
+    args: [authorized, isAuthorized ? 'true' : 'false'],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    authorized,
+    isAuthorized: !!isAuthorized,
+    network,
+  }
+}
+
 // ── Write: Vault operations ───────────────────────────────────────
 
 /**
@@ -586,6 +778,32 @@ export async function vaultWithdraw(vaultAddress, { assets, receiver, owner, net
     txHash: extractTxHash(receipt),
     vaultAddress,
     assets,
+    receiver,
+    network,
+  }
+}
+
+/**
+ * Redeem vault shares for underlying assets (share-denominated withdrawal).
+ */
+export async function vaultRedeem(vaultAddress, { shares, receiver, owner, network, rpcUrl }) {
+  if (!vaultAddress) throw new MorphoError('MISSING_VAULT', 'vault-address is required')
+  if (!shares) throw new MorphoError('MISSING_AMOUNT', 'shares amount is required')
+
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: vaultAddress,
+    method: 'redeem',
+    abi: VAULT_ABI,
+    args: [shares, receiver, owner || receiver],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    vaultAddress,
+    shares,
     receiver,
     network,
   }

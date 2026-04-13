@@ -1,4 +1,4 @@
-name: Morpho Full Lifecycle v1
+name: Morpho Full Lifecycle v2
 on:
   workflow_dispatch: {}
 

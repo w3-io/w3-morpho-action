@@ -28707,6 +28707,84 @@ async function getVaultBalance(vaultAddress, user, network, { rpcUrl } = {}) {
   }
 }
 
+/**
+ * List MetaMorpho vaults from the Morpho GraphQL API.
+ */
+async function listVaults(network, { first = 20 } = {}) {
+  const config = NETWORKS[network?.toLowerCase()]
+  if (!config) {
+    throw new MorphoError(
+      'UNSUPPORTED_NETWORK',
+      `Network "${network}" not supported. Available: ${Object.keys(NETWORKS).join(', ')}`,
+    )
+  }
+
+  const query = `{
+    vaults(first: ${first}, where: { chainId_in: [${config.chainId}] }, orderBy: TotalAssetsUsd, orderDirection: Desc) {
+      items {
+        address
+        name
+        symbol
+        asset { symbol address decimals }
+        state {
+          totalAssetsUsd
+          apy
+        }
+      }
+    }
+  }`
+
+  const json = await request(MORPHO_API_URL, {
+    method: 'POST',
+    body: { query },
+  })
+
+  const items = json?.data?.vaults?.items || []
+
+  return {
+    network,
+    count: items.length,
+    vaults: items.map((v) => ({
+      address: v.address,
+      name: v.name,
+      symbol: v.symbol,
+      asset: v.asset?.symbol || 'unknown',
+      totalAssetsUsd: v.state?.totalAssetsUsd ? `$${Number(v.state.totalAssetsUsd).toFixed(0)}` : '$0',
+      apy: v.state?.apy ? `${(Number(v.state.apy) * 100).toFixed(2)}%` : '0%',
+    })),
+  }
+}
+
+// ── Read: ERC20 allowance ─────────────────────────────────────────
+
+/**
+ * Check ERC20 allowance for Morpho Blue or a vault.
+ */
+async function getAllowance(token, owner, { spender, network, rpcUrl }) {
+  if (!token) throw new MorphoError('MISSING_TOKEN', 'token address is required')
+  if (!owner) throw new MorphoError('MISSING_USER', 'owner address is required')
+
+  const net = resolveNetwork(network, rpcUrl)
+  const target = spender || MORPHO_BLUE
+
+  const allowance = unwrapBridgeResult(
+    await bridge.chain('ethereum', 'read-contract', {
+      contract: token,
+      method: 'function allowance(address, address) returns (uint256)',
+      args: [owner, target],
+      ...net.params,
+    }, net.network),
+  )
+
+  return {
+    token,
+    owner,
+    spender: target,
+    allowance: String(allowance),
+    network,
+  }
+}
+
 // ── Write: WETH wrapping ──────────────────────────────────────────
 
 const WETH_ADDRESSES = {
@@ -28734,6 +28812,33 @@ async function wrapEth({ amount, network, rpcUrl }) {
     method: 'function deposit()',
     args: [],
     value: amount,
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    weth,
+    amount,
+    network,
+  }
+}
+
+/**
+ * Unwrap WETH back to native ETH.
+ */
+async function unwrapEth({ amount, network, rpcUrl }) {
+  if (!amount) throw new MorphoError('MISSING_AMOUNT', 'amount in wei is required')
+
+  const net = resolveNetwork(network, rpcUrl)
+  const weth = WETH_ADDRESSES[network.toLowerCase()]
+  if (!weth) {
+    throw new MorphoError('UNSUPPORTED_NETWORK', `No WETH address for ${network}`)
+  }
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: weth,
+    method: 'function withdraw(uint256)',
+    args: [amount],
     ...net.params,
   }, net.network)
 
@@ -28914,6 +29019,93 @@ async function repay(marketParams, { assets, onBehalf, network, rpcUrl }) {
   }
 }
 
+/**
+ * Liquidate an unhealthy position.
+ */
+async function liquidate(marketParams, { borrower, seizedAssets, network, rpcUrl }) {
+  if (!borrower) throw new MorphoError('MISSING_BORROWER', 'borrower address is required')
+  if (!seizedAssets) throw new MorphoError('MISSING_AMOUNT', 'seized-assets is required')
+
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: MORPHO_BLUE,
+    method: 'liquidate',
+    abi: MORPHO_ABI,
+    args: [formatMarketParams(marketParams), borrower, seizedAssets, '0', '0x'],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    borrower,
+    seizedAssets,
+    network,
+  }
+}
+
+/**
+ * Force interest accrual on a market for accurate reads.
+ */
+async function accrueInterest(marketParams, { network, rpcUrl }) {
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: MORPHO_BLUE,
+    method: 'function accrueInterest((address, address, address, address, uint256))',
+    args: [formatMarketParams(marketParams)],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    network,
+  }
+}
+
+/**
+ * Create a new Morpho Blue market.
+ */
+async function createMarket(marketParams, { network, rpcUrl }) {
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: MORPHO_BLUE,
+    method: 'function createMarket((address, address, address, address, uint256))',
+    args: [formatMarketParams(marketParams)],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    marketParams,
+    network,
+  }
+}
+
+/**
+ * Authorize another address to manage positions on your behalf.
+ */
+async function setAuthorization({ authorized, isAuthorized, network, rpcUrl }) {
+  if (!authorized) throw new MorphoError('MISSING_ADDRESS', 'authorized address is required')
+
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: MORPHO_BLUE,
+    method: 'function setAuthorization(address, bool)',
+    args: [authorized, isAuthorized ? 'true' : 'false'],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    authorized,
+    isAuthorized: !!isAuthorized,
+    network,
+  }
+}
+
 // ── Write: Vault operations ───────────────────────────────────────
 
 /**
@@ -28963,6 +29155,32 @@ async function vaultWithdraw(vaultAddress, { assets, receiver, owner, network, r
     txHash: extractTxHash(receipt),
     vaultAddress,
     assets,
+    receiver,
+    network,
+  }
+}
+
+/**
+ * Redeem vault shares for underlying assets (share-denominated withdrawal).
+ */
+async function vaultRedeem(vaultAddress, { shares, receiver, owner, network, rpcUrl }) {
+  if (!vaultAddress) throw new MorphoError('MISSING_VAULT', 'vault-address is required')
+  if (!shares) throw new MorphoError('MISSING_AMOUNT', 'shares amount is required')
+
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: vaultAddress,
+    method: 'redeem',
+    abi: VAULT_ABI,
+    args: [shares, receiver, owner || receiver],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    vaultAddress,
+    shares,
     receiver,
     network,
   }
@@ -29033,6 +29251,19 @@ const handlers = {
     setJsonOutput('result', result)
   },
 
+  'get-allowance': async () => {
+    const result = await getAllowance(
+      lib_core.getInput('asset', { required: true }),
+      lib_core.getInput('user', { required: true }),
+      {
+        spender: lib_core.getInput('spender') || undefined,
+        network: lib_core.getInput('network', { required: true }),
+        rpcUrl: rpcUrl(),
+      },
+    )
+    setJsonOutput('result', result)
+  },
+
   // ── Vault: Read ─────────────────────────────────────────────────
 
   'vault-info': async () => {
@@ -29054,6 +29285,13 @@ const handlers = {
     setJsonOutput('result', result)
   },
 
+  'list-vaults': async () => {
+    const result = await listVaults(lib_core.getInput('network', { required: true }), {
+      first: Number(lib_core.getInput('limit')) || 20,
+    })
+    setJsonOutput('result', result)
+  },
+
   // ── ERC20 Approval ───────────────────────────────────────────────
 
   approve: async () => {
@@ -29068,6 +29306,15 @@ const handlers = {
 
   'wrap-eth': async () => {
     const result = await wrapEth({
+      amount: lib_core.getInput('amount', { required: true }),
+      network: lib_core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
+  'unwrap-eth': async () => {
+    const result = await unwrapEth({
       amount: lib_core.getInput('amount', { required: true }),
       network: lib_core.getInput('network', { required: true }),
       rpcUrl: rpcUrl(),
@@ -29140,6 +29387,42 @@ const handlers = {
     setJsonOutput('result', result)
   },
 
+  liquidate: async () => {
+    const result = await liquidate(marketParamsFromInputs(), {
+      borrower: lib_core.getInput('borrower', { required: true }),
+      seizedAssets: lib_core.getInput('seized-assets', { required: true }),
+      network: lib_core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
+  'accrue-interest': async () => {
+    const result = await accrueInterest(marketParamsFromInputs(), {
+      network: lib_core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
+  'create-market': async () => {
+    const result = await createMarket(marketParamsFromInputs(), {
+      network: lib_core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
+  'set-authorization': async () => {
+    const result = await setAuthorization({
+      authorized: lib_core.getInput('authorized', { required: true }),
+      isAuthorized: lib_core.getInput('is-authorized') !== 'false',
+      network: lib_core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
   // ── Vault: Write ────────────────────────────────────────────────
 
   'vault-deposit': async () => {
@@ -29160,6 +29443,20 @@ const handlers = {
       lib_core.getInput('vault-address', { required: true }),
       {
         assets: lib_core.getInput('amount', { required: true }),
+        receiver: lib_core.getInput('receiver', { required: true }),
+        owner: lib_core.getInput('owner') || undefined,
+        network: lib_core.getInput('network', { required: true }),
+        rpcUrl: rpcUrl(),
+      },
+    )
+    setJsonOutput('result', result)
+  },
+
+  'vault-redeem': async () => {
+    const result = await vaultRedeem(
+      lib_core.getInput('vault-address', { required: true }),
+      {
+        shares: lib_core.getInput('shares', { required: true }),
         receiver: lib_core.getInput('receiver', { required: true }),
         owner: lib_core.getInput('owner') || undefined,
         network: lib_core.getInput('network', { required: true }),

@@ -5,18 +5,26 @@ import {
   getMarketParams,
   getPosition,
   listMarkets,
+  getAllowance,
   getVaultInfo,
   getVaultBalance,
+  listVaults,
   approve,
   wrapEth,
+  unwrapEth,
   supply,
   withdraw,
   supplyCollateral,
   withdrawCollateral,
   borrow,
   repay,
+  liquidate,
+  accrueInterest,
+  createMarket,
+  setAuthorization,
   vaultDeposit,
   vaultWithdraw,
+  vaultRedeem,
   MorphoError,
 } from './morpho.js'
 
@@ -80,6 +88,19 @@ const handlers = {
     setJsonOutput('result', result)
   },
 
+  'get-allowance': async () => {
+    const result = await getAllowance(
+      core.getInput('asset', { required: true }),
+      core.getInput('user', { required: true }),
+      {
+        spender: core.getInput('spender') || undefined,
+        network: core.getInput('network', { required: true }),
+        rpcUrl: rpcUrl(),
+      },
+    )
+    setJsonOutput('result', result)
+  },
+
   // ── Vault: Read ─────────────────────────────────────────────────
 
   'vault-info': async () => {
@@ -101,6 +122,13 @@ const handlers = {
     setJsonOutput('result', result)
   },
 
+  'list-vaults': async () => {
+    const result = await listVaults(core.getInput('network', { required: true }), {
+      first: Number(core.getInput('limit')) || 20,
+    })
+    setJsonOutput('result', result)
+  },
+
   // ── ERC20 Approval ───────────────────────────────────────────────
 
   approve: async () => {
@@ -115,6 +143,15 @@ const handlers = {
 
   'wrap-eth': async () => {
     const result = await wrapEth({
+      amount: core.getInput('amount', { required: true }),
+      network: core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
+  'unwrap-eth': async () => {
+    const result = await unwrapEth({
       amount: core.getInput('amount', { required: true }),
       network: core.getInput('network', { required: true }),
       rpcUrl: rpcUrl(),
@@ -187,6 +224,42 @@ const handlers = {
     setJsonOutput('result', result)
   },
 
+  liquidate: async () => {
+    const result = await liquidate(marketParamsFromInputs(), {
+      borrower: core.getInput('borrower', { required: true }),
+      seizedAssets: core.getInput('seized-assets', { required: true }),
+      network: core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
+  'accrue-interest': async () => {
+    const result = await accrueInterest(marketParamsFromInputs(), {
+      network: core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
+  'create-market': async () => {
+    const result = await createMarket(marketParamsFromInputs(), {
+      network: core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
+  'set-authorization': async () => {
+    const result = await setAuthorization({
+      authorized: core.getInput('authorized', { required: true }),
+      isAuthorized: core.getInput('is-authorized') !== 'false',
+      network: core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
   // ── Vault: Write ────────────────────────────────────────────────
 
   'vault-deposit': async () => {
@@ -207,6 +280,20 @@ const handlers = {
       core.getInput('vault-address', { required: true }),
       {
         assets: core.getInput('amount', { required: true }),
+        receiver: core.getInput('receiver', { required: true }),
+        owner: core.getInput('owner') || undefined,
+        network: core.getInput('network', { required: true }),
+        rpcUrl: rpcUrl(),
+      },
+    )
+    setJsonOutput('result', result)
+  },
+
+  'vault-redeem': async () => {
+    const result = await vaultRedeem(
+      core.getInput('vault-address', { required: true }),
+      {
+        shares: core.getInput('shares', { required: true }),
         receiver: core.getInput('receiver', { required: true }),
         owner: core.getInput('owner') || undefined,
         network: core.getInput('network', { required: true }),

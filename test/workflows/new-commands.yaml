@@ -1,0 +1,63 @@
+name: Morpho New Commands v1
+on:
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # ── list-vaults (API) ────────────────────────────────────
+      - uses: w3-io/w3-morpho-action@main
+        id: vaults
+        with:
+          command: list-vaults
+          network: base
+          limit: '3'
+
+      # ── get-allowance ────────────────────────────────────────
+      - uses: w3-io/w3-morpho-action@main
+        id: allowance
+        with:
+          command: get-allowance
+          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # ── set-authorization ────────────────────────────────────
+      - uses: w3-io/w3-morpho-action@main
+        id: auth
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: set-authorization
+          authorized: '0x0000000000000000000000000000000000000001'
+          is-authorized: 'true'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # ── Revoke the authorization we just set ─────────────────
+      - uses: w3-io/w3-morpho-action@main
+        id: revoke
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: set-authorization
+          authorized: '0x0000000000000000000000000000000000000001'
+          is-authorized: 'false'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      - run: |
+          echo "=== Vaults ==="
+          echo "${{ steps.vaults.outputs.result }}"
+          echo "=== Allowance ==="
+          echo "${{ steps.allowance.outputs.result }}"
+          echo "=== Auth ==="
+          echo "${{ steps.auth.outputs.result }}"
+          echo "=== Revoke ==="
+          echo "${{ steps.revoke.outputs.result }}"

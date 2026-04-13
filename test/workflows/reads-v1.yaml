@@ -1,4 +1,4 @@
-name: Morpho Reads v1
+name: Morpho Reads v2
 on:
   workflow_dispatch: {}
 

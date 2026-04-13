@@ -1,0 +1,115 @@
+name: Morpho Remaining v1
+on:
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # ── unwrap-eth: wrap then unwrap ─────────────────────────
+      - uses: w3-io/w3-morpho-action@main
+        id: wrap
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: wrap-eth
+          amount: '10000000000000'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      - uses: w3-io/w3-morpho-action@main
+        id: unwrap
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: unwrap-eth
+          amount: '10000000000000'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # ── accrue-interest on USDC/WETH market ──────────────────
+      - uses: w3-io/w3-morpho-action@main
+        id: accrue
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: accrue-interest
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # ── vault-redeem: approve, deposit, then redeem shares ───
+      - uses: w3-io/w3-morpho-action@main
+        id: approve-vault
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: approve
+          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          spender: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          amount: '10000'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      - uses: w3-io/w3-morpho-action@main
+        id: deposit
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: vault-deposit
+          vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          amount: '10000'
+          receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # Check how many shares we got
+      - uses: w3-io/w3-morpho-action@main
+        id: bal
+        with:
+          command: vault-balance
+          vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # Redeem ALL shares (use a large number, vault caps at max)
+      - uses: w3-io/w3-morpho-action@main
+        id: redeem
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: vault-redeem
+          vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          shares: '9000000000000'
+          receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      - run: |
+          echo "=== Wrap ==="
+          echo "${{ steps.wrap.outputs.result }}"
+          echo "=== Unwrap ==="
+          echo "${{ steps.unwrap.outputs.result }}"
+          echo "=== Accrue Interest ==="
+          echo "${{ steps.accrue.outputs.result }}"
+          echo "=== Vault Balance ==="
+          echo "${{ steps.bal.outputs.result }}"
+          echo "=== Vault Redeem ==="
+          echo "${{ steps.redeem.outputs.result }}"

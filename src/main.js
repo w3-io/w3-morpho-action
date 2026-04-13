@@ -8,9 +8,11 @@ import {
   getVaultInfo,
   getVaultBalance,
   approve,
+  wrapEth,
   supply,
   withdraw,
   supplyCollateral,
+  withdrawCollateral,
   borrow,
   repay,
   vaultDeposit,
@@ -104,6 +106,16 @@ const handlers = {
   approve: async () => {
     const result = await approve(core.getInput('asset', { required: true }), {
       amount: core.getInput('amount', { required: true }),
+      spender: core.getInput('spender') || undefined,
+      network: core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
+  'wrap-eth': async () => {
+    const result = await wrapEth({
+      amount: core.getInput('amount', { required: true }),
       network: core.getInput('network', { required: true }),
       rpcUrl: rpcUrl(),
     })
@@ -137,6 +149,17 @@ const handlers = {
     const result = await supplyCollateral(marketParamsFromInputs(), {
       assets: core.getInput('amount', { required: true }),
       onBehalf: core.getInput('on-behalf-of', { required: true }),
+      network: core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
+  'withdraw-collateral': async () => {
+    const result = await withdrawCollateral(marketParamsFromInputs(), {
+      assets: core.getInput('amount', { required: true }),
+      onBehalf: core.getInput('on-behalf-of', { required: true }),
+      receiver: core.getInput('receiver') || undefined,
       network: core.getInput('network', { required: true }),
       rpcUrl: rpcUrl(),
     })

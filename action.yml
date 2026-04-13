@@ -43,6 +43,9 @@ inputs:
   asset:
     description: 'ERC-20 token address (for approve command)'
     required: false
+  spender:
+    description: 'Spender address for approve (defaults to Morpho Blue)'
+    required: false
 
   # Amounts and addresses
   amount:

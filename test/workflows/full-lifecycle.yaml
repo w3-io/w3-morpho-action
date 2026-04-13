@@ -1,0 +1,218 @@
+name: Morpho Full Lifecycle v1
+on:
+  workflow_dispatch: {}
+
+jobs:
+  lifecycle:
+    runs-on: ubuntu-latest
+    steps:
+      # ══════════════════════════════════════════════════════════
+      # Part 1: Collateral → Borrow → Repay → Withdraw Collateral
+      # ══════════════════════════════════════════════════════════
+
+      # 1a. Wrap 0.00005 ETH → WETH (50000000000000 wei)
+      - uses: w3-io/w3-morpho-action@main
+        id: wrap
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: wrap-eth
+          amount: '50000000000000'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # 1b. Approve WETH for Morpho Blue
+      - uses: w3-io/w3-morpho-action@main
+        id: approve-weth
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: approve
+          asset: '0x4200000000000000000000000000000000000006'
+          amount: '50000000000000'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # 1c. Supply WETH as collateral
+      - uses: w3-io/w3-morpho-action@main
+        id: supply-collateral
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: supply-collateral
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '50000000000000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # 1d. Borrow 1000 USDC (0.001 USDC) against WETH collateral
+      - uses: w3-io/w3-morpho-action@main
+        id: borrow
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: borrow
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '1000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # 1e. Check position after borrow
+      - uses: w3-io/w3-morpho-action@main
+        id: position-after-borrow
+        with:
+          command: get-position
+          market-id: '0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda'
+          user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # 1f. Approve USDC for repay
+      - uses: w3-io/w3-morpho-action@main
+        id: approve-usdc-repay
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: approve
+          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          amount: '10000'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # 1g. Repay the borrowed USDC
+      - uses: w3-io/w3-morpho-action@main
+        id: repay
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: repay
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '1000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # 1h. Withdraw collateral
+      - uses: w3-io/w3-morpho-action@main
+        id: withdraw-collateral
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: withdraw-collateral
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '50000000000000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # ══════════════════════════════════════════════════════════
+      # Part 2: Vault deposit → balance → withdraw
+      # ══════════════════════════════════════════════════════════
+
+      # 2a. Approve USDC for vault (spender = vault address, not Morpho Blue)
+      - uses: w3-io/w3-morpho-action@main
+        id: approve-vault
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: approve
+          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          spender: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          amount: '10000'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # 2b. Deposit 0.01 USDC into Steakhouse Prime vault
+      - uses: w3-io/w3-morpho-action@main
+        id: vault-deposit
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: vault-deposit
+          vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          amount: '10000'
+          receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # 2c. Check vault balance
+      - uses: w3-io/w3-morpho-action@main
+        id: vault-bal
+        with:
+          command: vault-balance
+          vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # 2d. Withdraw from vault
+      - uses: w3-io/w3-morpho-action@main
+        id: vault-withdraw
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: vault-withdraw
+          vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          amount: '10000'
+          receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # ══════════════════════════════════════════════════════════
+      - run: |
+          echo "=== Wrap ETH ==="
+          echo "${{ steps.wrap.outputs.result }}"
+          echo "=== Supply Collateral ==="
+          echo "${{ steps.supply-collateral.outputs.result }}"
+          echo "=== Borrow ==="
+          echo "${{ steps.borrow.outputs.result }}"
+          echo "=== Position ==="
+          echo "${{ steps.position-after-borrow.outputs.result }}"
+          echo "=== Repay ==="
+          echo "${{ steps.repay.outputs.result }}"
+          echo "=== Withdraw Collateral ==="
+          echo "${{ steps.withdraw-collateral.outputs.result }}"
+          echo "=== Vault Deposit ==="
+          echo "${{ steps.vault-deposit.outputs.result }}"
+          echo "=== Vault Balance ==="
+          echo "${{ steps.vault-bal.outputs.result }}"
+          echo "=== Vault Withdraw ==="
+          echo "${{ steps.vault-withdraw.outputs.result }}"

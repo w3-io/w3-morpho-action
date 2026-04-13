@@ -7,6 +7,7 @@ import {
   listMarkets,
   getVaultInfo,
   getVaultBalance,
+  approve,
   supply,
   withdraw,
   supplyCollateral,
@@ -95,6 +96,17 @@ const handlers = {
       core.getInput('network', { required: true }),
       { rpcUrl: rpcUrl() },
     )
+    setJsonOutput('result', result)
+  },
+
+  // ── ERC20 Approval ───────────────────────────────────────────────
+
+  approve: async () => {
+    const result = await approve(core.getInput('asset', { required: true }), {
+      amount: core.getInput('amount', { required: true }),
+      network: core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
     setJsonOutput('result', result)
   },
 

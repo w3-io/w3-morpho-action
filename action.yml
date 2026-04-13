@@ -39,6 +39,11 @@ inputs:
     description: 'Liquidation LTV in wei (e.g. 860000000000000000 = 86%)'
     required: false
 
+  # Token for approve command
+  asset:
+    description: 'ERC-20 token address (for approve command)'
+    required: false
+
   # Amounts and addresses
   amount:
     description: 'Token amount in base units'

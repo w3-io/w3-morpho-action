@@ -1,0 +1,77 @@
+name: Morpho Writes Base v1
+on:
+  workflow_dispatch: {}
+
+jobs:
+  writes:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Approve Morpho Blue to spend 10000 USDC (0.01 USDC)
+      - uses: w3-io/w3-morpho-action@main
+        id: approve
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: approve
+          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          amount: '10000'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # Step 2: Supply 10000 USDC (0.01 USDC) to the USDC/WETH market
+      - uses: w3-io/w3-morpho-action@main
+        id: supply
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: supply
+          network: base
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '10000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # Step 3: Read back the position to verify
+      - uses: w3-io/w3-morpho-action@main
+        id: position
+        with:
+          command: get-position
+          market-id: '0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda'
+          user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # Step 4: Withdraw the same amount
+      - uses: w3-io/w3-morpho-action@main
+        id: withdraw
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: withdraw
+          network: base
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '10000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          rpc-url: https://base-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      - run: |
+          echo "=== Supply ==="
+          echo "${{ steps.supply.outputs.result }}"
+          echo "=== Position ==="
+          echo "${{ steps.position.outputs.result }}"
+          echo "=== Withdraw ==="
+          echo "${{ steps.withdraw.outputs.result }}"

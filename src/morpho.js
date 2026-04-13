@@ -330,6 +330,33 @@ export async function getVaultBalance(vaultAddress, user, network, { rpcUrl } = 
   }
 }
 
+// ── Write: ERC20 approval ─────────────────────────────────────────
+
+/**
+ * Approve Morpho Blue to spend tokens. Required before supply/repay.
+ */
+export async function approve(token, { amount, network, rpcUrl }) {
+  if (!token) throw new MorphoError('MISSING_TOKEN', 'token address is required')
+  if (!amount) throw new MorphoError('MISSING_AMOUNT', 'amount is required')
+
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: token,
+    method: 'function approve(address, uint256) returns (bool)',
+    args: [MORPHO_BLUE, amount],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    token,
+    spender: MORPHO_BLUE,
+    amount,
+    network,
+  }
+}
+
 // ── Write: Blue market operations ─────────────────────────────────
 
 /**

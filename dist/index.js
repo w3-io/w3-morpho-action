@@ -27545,7 +27545,7 @@ function setOutputs(outputs) {
 /**
  * Structured error with code, message, and optional details.
  */
-class error_W3ActionError extends Error {
+class W3ActionError extends Error {
     code;
     statusCode;
     details;
@@ -27564,7 +27564,7 @@ class error_W3ActionError extends Error {
  *   main().catch(handleError);
  */
 function handleError(error) {
-    if (error instanceof error_W3ActionError) {
+    if (error instanceof W3ActionError) {
         lib_core.setOutput("error-code", error.code);
         if (error.statusCode)
             lib_core.setOutput("status-code", error.statusCode);
@@ -27705,10 +27705,10 @@ async function bridgeRequest(path, body) {
                     if (!res.statusCode || res.statusCode >= 400) {
                         try {
                             const err = JSON.parse(data);
-                            reject(new error_W3ActionError(err.code ?? "BRIDGE_ERROR", err.error ?? `Bridge returned ${res.statusCode}`, { statusCode: res.statusCode, details: err }));
+                            reject(new W3ActionError(err.code ?? "BRIDGE_ERROR", err.error ?? `Bridge returned ${res.statusCode}`, { statusCode: res.statusCode, details: err }));
                         }
                         catch {
-                            reject(new error_W3ActionError("BRIDGE_ERROR", data || `HTTP ${res.statusCode}`, { statusCode: res.statusCode }));
+                            reject(new W3ActionError("BRIDGE_ERROR", data || `HTTP ${res.statusCode}`, { statusCode: res.statusCode }));
                         }
                         return;
                     }
@@ -27720,7 +27720,7 @@ async function bridgeRequest(path, body) {
                     }
                 });
             });
-            req.on("error", (err) => reject(new error_W3ActionError("BRIDGE_UNAVAILABLE", err.message)));
+            req.on("error", (err) => reject(new W3ActionError("BRIDGE_UNAVAILABLE", err.message)));
             if (payload)
                 req.write(payload);
             req.end();
@@ -27743,7 +27743,7 @@ async function bridgeRequest(path, body) {
         catch {
             // not JSON
         }
-        throw new error_W3ActionError(parsed?.code ?? "BRIDGE_ERROR", parsed?.error ?? text ?? `Bridge returned ${res.status}`, { statusCode: res.status, details: parsed });
+        throw new W3ActionError(parsed?.code ?? "BRIDGE_ERROR", parsed?.error ?? text ?? `Bridge returned ${res.status}`, { statusCode: res.status, details: parsed });
     }
     try {
         return JSON.parse(text);
@@ -28393,7 +28393,7 @@ const MORPHO_API_URL = 'https://blue-api.morpho.org/graphql'
 
 
 
-class MorphoError extends error_W3ActionError {
+class MorphoError extends W3ActionError {
   constructor(code, message, { details } = {}) {
     super(code, message, { details })
     this.name = 'MorphoError'
@@ -28590,17 +28590,11 @@ async function listMarkets(network, { first = 20, rpcUrl } = {}) {
     }
   }`
 
-  const response = await fetch(MORPHO_API_URL, {
+  const json = await request(MORPHO_API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query }),
   })
-
-  if (!response.ok) {
-    throw new MorphoError('API_ERROR', `Morpho API error: ${response.status}`)
-  }
-
-  const json = await response.json()
   const items = json?.data?.markets?.items || []
 
   return {

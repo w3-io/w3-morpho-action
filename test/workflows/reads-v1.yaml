@@ -1,4 +1,4 @@
-name: Morpho Reads v2
+name: Morpho Reads v3
 on:
   workflow_dispatch: {}
 
@@ -6,7 +6,7 @@ jobs:
   reads:
     runs-on: ubuntu-latest
     steps:
-      # Get market state for USDC/PAXG market on Ethereum mainnet
+      # ── Blue: get-market ─────────────────────────────────────
       - uses: w3-io/w3-morpho-action@main
         id: market
         with:
@@ -15,7 +15,7 @@ jobs:
           network: ethereum
           rpc-url: https://eth-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
 
-      # Get the market params for the same market
+      # ── Blue: get-market-params ──────────────────────────────
       - uses: w3-io/w3-morpho-action@main
         id: params
         with:
@@ -24,8 +24,53 @@ jobs:
           network: ethereum
           rpc-url: https://eth-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
 
+      # ── Blue: get-position (check a random address) ──────────
+      - uses: w3-io/w3-morpho-action@main
+        id: position
+        with:
+          command: get-position
+          market-id: '0x8eaf7b29f02ba8d8c1d7aeb587403dcb16e2e943e4e2f5f94b0963c2386406c9'
+          user: '0x0000000000000000000000000000000000000001'
+          network: ethereum
+          rpc-url: https://eth-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # ── Blue: list-markets (GraphQL API, no bridge) ──────────
+      - uses: w3-io/w3-morpho-action@main
+        id: markets
+        with:
+          command: list-markets
+          network: ethereum
+          limit: '5'
+
+      # ── Vault: vault-info (Steakhouse USDC) ──────────────────
+      - uses: w3-io/w3-morpho-action@main
+        id: vault-info
+        with:
+          command: vault-info
+          vault-address: '0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB'
+          network: ethereum
+          rpc-url: https://eth-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
+      # ── Vault: vault-balance (check zero-balance addr) ───────
+      - uses: w3-io/w3-morpho-action@main
+        id: vault-balance
+        with:
+          command: vault-balance
+          vault-address: '0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB'
+          user: '0x0000000000000000000000000000000000000001'
+          network: ethereum
+          rpc-url: https://eth-mainnet.g.alchemy.com/v2/0L3k1EjL5mpti6pqRUi1y
+
       - run: |
-          echo "=== Market State ==="
+          echo "=== Market ==="
           echo "${{ steps.market.outputs.result }}"
-          echo "=== Market Params ==="
+          echo "=== Params ==="
           echo "${{ steps.params.outputs.result }}"
+          echo "=== Position ==="
+          echo "${{ steps.position.outputs.result }}"
+          echo "=== Markets List ==="
+          echo "${{ steps.markets.outputs.result }}"
+          echo "=== Vault Info ==="
+          echo "${{ steps.vault-info.outputs.result }}"
+          echo "=== Vault Balance ==="
+          echo "${{ steps.vault-balance.outputs.result }}"

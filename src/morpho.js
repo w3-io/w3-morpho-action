@@ -13,7 +13,7 @@
  *   - Writes: bridge.chain('ethereum', 'call-contract', ...)
  */
 
-import { W3ActionError, bridge } from '@w3-io/action-core'
+import { W3ActionError, bridge, request } from '@w3-io/action-core'
 import { MORPHO_BLUE, MORPHO_ABI, VAULT_ABI, NETWORKS, MORPHO_API_URL } from './registry.js'
 
 export class MorphoError extends W3ActionError {
@@ -213,17 +213,11 @@ export async function listMarkets(network, { first = 20, rpcUrl } = {}) {
     }
   }`
 
-  const response = await fetch(MORPHO_API_URL, {
+  const json = await request(MORPHO_API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query }),
   })
-
-  if (!response.ok) {
-    throw new MorphoError('API_ERROR', `Morpho API error: ${response.status}`)
-  }
-
-  const json = await response.json()
   const items = json?.data?.markets?.items || []
 
   return {

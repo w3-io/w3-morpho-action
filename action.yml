@@ -1,43 +1,75 @@
-# TODO: Replace this entire file with your action's definition.
-#
-# This file is the contract between your action and the workflow runner.
-# It defines what inputs your action accepts and what outputs it produces.
-# Keep inputs minimal and well-named. See the README for naming conventions.
-#
-# Reference: https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions
-
-name: 'W3 YourPartner Action' # TODO: e.g. "W3 Cube3 Action"
-description: 'Short description' # TODO: what does your action do?
+name: 'W3 Morpho Action'
+description: 'Morpho Blue lending and MetaMorpho vaults — supply, borrow, liquidate, flash loans, and ERC-4626 vault operations.'
 author: 'w3-io'
 
 inputs:
   command:
-    description: 'Operation to perform' # TODO: list your commands here
+    description: >
+      Operation to perform. Blue reads: get-market, get-market-params,
+      get-position, list-markets. Vault reads: vault-info, vault-balance.
+      Blue writes: supply, withdraw, supply-collateral, borrow, repay.
+      Vault writes: vault-deposit, vault-withdraw.
     required: true
-  api-key:
-    description: 'API key for authentication'
-    required: true # TODO: set to false if your API needs no auth
-  api-url:
-    description: 'API base URL override (for testing or staging)'
+  network:
+    description: 'Blockchain network (ethereum, base, arbitrum, polygon, optimism)'
+    required: true
+  rpc-url:
+    description: 'Custom RPC endpoint URL (recommended for reliability)'
     required: false
-    default: 'https://api.yourpartner.com' # TODO: your partner's production API URL
 
-  # TODO: Add your command-specific inputs below. Use plain names without
-  # partner prefix. For example:
-  #
-  # address:
-  #   description: 'Blockchain address to inspect'
-  #   required: false
-  #
-  # symbols:
-  #   description: 'Comma-separated token symbols (e.g. "BTC,ETH")'
-  #   required: false
+  # Blue market identification
+  market-id:
+    description: 'Morpho Blue market ID (bytes32 hash)'
+    required: false
+
+  # Blue market params (for write operations)
+  loan-token:
+    description: 'Loan token address'
+    required: false
+  collateral-token:
+    description: 'Collateral token address'
+    required: false
+  oracle:
+    description: 'Oracle contract address'
+    required: false
+  irm:
+    description: 'Interest rate model address'
+    required: false
+  lltv:
+    description: 'Liquidation LTV in wei (e.g. 860000000000000000 = 86%)'
+    required: false
+
+  # Amounts and addresses
+  amount:
+    description: 'Token amount in base units'
+    required: false
+  user:
+    description: 'User address for position queries'
+    required: false
+  on-behalf-of:
+    description: 'Address to operate on behalf of (defaults to signer)'
+    required: false
+  receiver:
+    description: 'Receiver address for withdrawals'
+    required: false
+
+  # Vault inputs
+  vault-address:
+    description: 'MetaMorpho vault contract address'
+    required: false
+  owner:
+    description: 'Share owner for vault withdrawals'
+    required: false
+
+  # List controls
+  limit:
+    description: 'Number of results for list commands (default 20)'
+    required: false
+    default: '20'
 
 outputs:
   result:
     description: 'JSON result of the operation'
-    # This is the only output. Always a JSON string.
-    # Document the schema in your w3-action.yaml and docs/guide.md.
 
 runs:
   using: 'node24'

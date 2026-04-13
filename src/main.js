@@ -263,43 +263,34 @@ const handlers = {
   // ── Vault: Write ────────────────────────────────────────────────
 
   'vault-deposit': async () => {
-    const result = await vaultDeposit(
-      core.getInput('vault-address', { required: true }),
-      {
-        assets: core.getInput('amount', { required: true }),
-        receiver: core.getInput('receiver', { required: true }),
-        network: core.getInput('network', { required: true }),
-        rpcUrl: rpcUrl(),
-      },
-    )
+    const result = await vaultDeposit(core.getInput('vault-address', { required: true }), {
+      assets: core.getInput('amount', { required: true }),
+      receiver: core.getInput('receiver', { required: true }),
+      network: core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
     setJsonOutput('result', result)
   },
 
   'vault-withdraw': async () => {
-    const result = await vaultWithdraw(
-      core.getInput('vault-address', { required: true }),
-      {
-        assets: core.getInput('amount', { required: true }),
-        receiver: core.getInput('receiver', { required: true }),
-        owner: core.getInput('owner') || undefined,
-        network: core.getInput('network', { required: true }),
-        rpcUrl: rpcUrl(),
-      },
-    )
+    const result = await vaultWithdraw(core.getInput('vault-address', { required: true }), {
+      assets: core.getInput('amount', { required: true }),
+      receiver: core.getInput('receiver', { required: true }),
+      owner: core.getInput('owner') || undefined,
+      network: core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
     setJsonOutput('result', result)
   },
 
   'vault-redeem': async () => {
-    const result = await vaultRedeem(
-      core.getInput('vault-address', { required: true }),
-      {
-        shares: core.getInput('shares', { required: true }),
-        receiver: core.getInput('receiver', { required: true }),
-        owner: core.getInput('owner') || undefined,
-        network: core.getInput('network', { required: true }),
-        rpcUrl: rpcUrl(),
-      },
-    )
+    const result = await vaultRedeem(core.getInput('vault-address', { required: true }), {
+      shares: core.getInput('shares', { required: true }),
+      receiver: core.getInput('receiver', { required: true }),
+      owner: core.getInput('owner') || undefined,
+      network: core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
     setJsonOutput('result', result)
   },
 }

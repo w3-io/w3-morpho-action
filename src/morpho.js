@@ -76,18 +76,27 @@ export async function getMarket(marketId, network, { rpcUrl } = {}) {
   const net = resolveNetwork(network, rpcUrl)
 
   const raw = unwrapBridgeResult(
-    await bridge.chain('ethereum', 'read-contract', {
-      contract: MORPHO_BLUE,
-      method: 'market',
-      abi: MORPHO_ABI,
-      args: [marketId],
-      ...net.params,
-    }, net.network),
+    await bridge.chain(
+      'ethereum',
+      'read-contract',
+      {
+        contract: MORPHO_BLUE,
+        method: 'market',
+        abi: MORPHO_ABI,
+        args: [marketId],
+        ...net.params,
+      },
+      net.network,
+    ),
   )
 
   let data = raw
   if (typeof data === 'string') {
-    try { data = JSON.parse(data) } catch { /* use as-is */ }
+    try {
+      data = JSON.parse(data)
+    } catch {
+      /* use as-is */
+    }
   }
 
   const totalSupplyAssets = String(Array.isArray(data) ? data[0] : data?.totalSupplyAssets || '0')
@@ -124,18 +133,27 @@ export async function getMarketParams(marketId, network, { rpcUrl } = {}) {
   const net = resolveNetwork(network, rpcUrl)
 
   const raw = unwrapBridgeResult(
-    await bridge.chain('ethereum', 'read-contract', {
-      contract: MORPHO_BLUE,
-      method: 'idToMarketParams',
-      abi: MORPHO_ABI,
-      args: [marketId],
-      ...net.params,
-    }, net.network),
+    await bridge.chain(
+      'ethereum',
+      'read-contract',
+      {
+        contract: MORPHO_BLUE,
+        method: 'idToMarketParams',
+        abi: MORPHO_ABI,
+        args: [marketId],
+        ...net.params,
+      },
+      net.network,
+    ),
   )
 
   let data = raw
   if (typeof data === 'string') {
-    try { data = JSON.parse(data) } catch { /* use as-is */ }
+    try {
+      data = JSON.parse(data)
+    } catch {
+      /* use as-is */
+    }
   }
 
   return {
@@ -159,18 +177,27 @@ export async function getPosition(marketId, user, network, { rpcUrl } = {}) {
   const net = resolveNetwork(network, rpcUrl)
 
   const raw = unwrapBridgeResult(
-    await bridge.chain('ethereum', 'read-contract', {
-      contract: MORPHO_BLUE,
-      method: 'position',
-      abi: MORPHO_ABI,
-      args: [marketId, user],
-      ...net.params,
-    }, net.network),
+    await bridge.chain(
+      'ethereum',
+      'read-contract',
+      {
+        contract: MORPHO_BLUE,
+        method: 'position',
+        abi: MORPHO_ABI,
+        args: [marketId, user],
+        ...net.params,
+      },
+      net.network,
+    ),
   )
 
   let data = raw
   if (typeof data === 'string') {
-    try { data = JSON.parse(data) } catch { /* use as-is */ }
+    try {
+      data = JSON.parse(data)
+    } catch {
+      /* use as-is */
+    }
   }
 
   return {
@@ -186,7 +213,7 @@ export async function getPosition(marketId, user, network, { rpcUrl } = {}) {
 /**
  * List markets from the Morpho Blue GraphQL API.
  */
-export async function listMarkets(network, { first = 20, rpcUrl } = {}) {
+export async function listMarkets(network, { first = 20 } = {}) {
   const config = NETWORKS[network?.toLowerCase()]
   if (!config) {
     throw new MorphoError(
@@ -246,34 +273,62 @@ export async function getVaultInfo(vaultAddress, network, { rpcUrl } = {}) {
   const net = resolveNetwork(network, rpcUrl)
 
   const [name, symbol, asset, totalAssets] = await Promise.all([
-    bridge.chain('ethereum', 'read-contract', {
-      contract: vaultAddress,
-      method: 'name',
-      abi: VAULT_ABI,
-      args: [],
-      ...net.params,
-    }, net.network).then(unwrapBridgeResult),
-    bridge.chain('ethereum', 'read-contract', {
-      contract: vaultAddress,
-      method: 'symbol',
-      abi: VAULT_ABI,
-      args: [],
-      ...net.params,
-    }, net.network).then(unwrapBridgeResult),
-    bridge.chain('ethereum', 'read-contract', {
-      contract: vaultAddress,
-      method: 'asset',
-      abi: VAULT_ABI,
-      args: [],
-      ...net.params,
-    }, net.network).then(unwrapBridgeResult),
-    bridge.chain('ethereum', 'read-contract', {
-      contract: vaultAddress,
-      method: 'totalAssets',
-      abi: VAULT_ABI,
-      args: [],
-      ...net.params,
-    }, net.network).then(unwrapBridgeResult),
+    bridge
+      .chain(
+        'ethereum',
+        'read-contract',
+        {
+          contract: vaultAddress,
+          method: 'name',
+          abi: VAULT_ABI,
+          args: [],
+          ...net.params,
+        },
+        net.network,
+      )
+      .then(unwrapBridgeResult),
+    bridge
+      .chain(
+        'ethereum',
+        'read-contract',
+        {
+          contract: vaultAddress,
+          method: 'symbol',
+          abi: VAULT_ABI,
+          args: [],
+          ...net.params,
+        },
+        net.network,
+      )
+      .then(unwrapBridgeResult),
+    bridge
+      .chain(
+        'ethereum',
+        'read-contract',
+        {
+          contract: vaultAddress,
+          method: 'asset',
+          abi: VAULT_ABI,
+          args: [],
+          ...net.params,
+        },
+        net.network,
+      )
+      .then(unwrapBridgeResult),
+    bridge
+      .chain(
+        'ethereum',
+        'read-contract',
+        {
+          contract: vaultAddress,
+          method: 'totalAssets',
+          abi: VAULT_ABI,
+          args: [],
+          ...net.params,
+        },
+        net.network,
+      )
+      .then(unwrapBridgeResult),
   ])
 
   return {
@@ -296,13 +351,18 @@ export async function getVaultBalance(vaultAddress, user, network, { rpcUrl } = 
   const net = resolveNetwork(network, rpcUrl)
 
   const shares = unwrapBridgeResult(
-    await bridge.chain('ethereum', 'read-contract', {
-      contract: vaultAddress,
-      method: 'balanceOf',
-      abi: VAULT_ABI,
-      args: [user],
-      ...net.params,
-    }, net.network),
+    await bridge.chain(
+      'ethereum',
+      'read-contract',
+      {
+        contract: vaultAddress,
+        method: 'balanceOf',
+        abi: VAULT_ABI,
+        args: [user],
+        ...net.params,
+      },
+      net.network,
+    ),
   )
 
   const sharesStr = String(shares)
@@ -310,13 +370,18 @@ export async function getVaultBalance(vaultAddress, user, network, { rpcUrl } = 
 
   if (BigInt(sharesStr) > 0n) {
     const assets = unwrapBridgeResult(
-      await bridge.chain('ethereum', 'read-contract', {
-        contract: vaultAddress,
-        method: 'convertToAssets',
-        abi: VAULT_ABI,
-        args: [sharesStr],
-        ...net.params,
-      }, net.network),
+      await bridge.chain(
+        'ethereum',
+        'read-contract',
+        {
+          contract: vaultAddress,
+          method: 'convertToAssets',
+          abi: VAULT_ABI,
+          args: [sharesStr],
+          ...net.params,
+        },
+        net.network,
+      ),
     )
     assetsStr = String(assets)
   }
@@ -372,7 +437,9 @@ export async function listVaults(network, { first = 20 } = {}) {
       name: v.name,
       symbol: v.symbol,
       asset: v.asset?.symbol || 'unknown',
-      totalAssetsUsd: v.state?.totalAssetsUsd ? `$${Number(v.state.totalAssetsUsd).toFixed(0)}` : '$0',
+      totalAssetsUsd: v.state?.totalAssetsUsd
+        ? `$${Number(v.state.totalAssetsUsd).toFixed(0)}`
+        : '$0',
       apy: v.state?.apy ? `${(Number(v.state.apy) * 100).toFixed(2)}%` : '0%',
     })),
   }
@@ -391,12 +458,17 @@ export async function getAllowance(token, owner, { spender, network, rpcUrl }) {
   const target = spender || MORPHO_BLUE
 
   const allowance = unwrapBridgeResult(
-    await bridge.chain('ethereum', 'read-contract', {
-      contract: token,
-      method: 'function allowance(address, address) returns (uint256)',
-      args: [owner, target],
-      ...net.params,
-    }, net.network),
+    await bridge.chain(
+      'ethereum',
+      'read-contract',
+      {
+        contract: token,
+        method: 'function allowance(address, address) returns (uint256)',
+        args: [owner, target],
+        ...net.params,
+      },
+      net.network,
+    ),
   )
 
   return {
@@ -430,13 +502,18 @@ export async function wrapEth({ amount, network, rpcUrl }) {
     throw new MorphoError('UNSUPPORTED_NETWORK', `No WETH address for ${network}`)
   }
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: weth,
-    method: 'function deposit()',
-    args: [],
-    value: amount,
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: weth,
+      method: 'function deposit()',
+      args: [],
+      value: amount,
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -458,12 +535,17 @@ export async function unwrapEth({ amount, network, rpcUrl }) {
     throw new MorphoError('UNSUPPORTED_NETWORK', `No WETH address for ${network}`)
   }
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: weth,
-    method: 'function withdraw(uint256)',
-    args: [amount],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: weth,
+      method: 'function withdraw(uint256)',
+      args: [amount],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -485,12 +567,17 @@ export async function approve(token, { amount, spender, network, rpcUrl }) {
   const net = resolveNetwork(network, rpcUrl)
   const target = spender || MORPHO_BLUE
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: token,
-    method: 'function approve(address, uint256) returns (bool)',
-    args: [target, amount],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: token,
+      method: 'function approve(address, uint256) returns (bool)',
+      args: [target, amount],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -516,13 +603,18 @@ function formatMarketParams(params) {
 export async function supply(marketParams, { assets, onBehalf, network, rpcUrl }) {
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: MORPHO_BLUE,
-    method: 'supply',
-    abi: MORPHO_ABI,
-    args: [formatMarketParams(marketParams), assets, '0', onBehalf, '0x'],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: MORPHO_BLUE,
+      method: 'supply',
+      abi: MORPHO_ABI,
+      args: [formatMarketParams(marketParams), assets, '0', onBehalf, '0x'],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -538,13 +630,18 @@ export async function supply(marketParams, { assets, onBehalf, network, rpcUrl }
 export async function withdraw(marketParams, { assets, onBehalf, receiver, network, rpcUrl }) {
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: MORPHO_BLUE,
-    method: 'withdraw',
-    abi: MORPHO_ABI,
-    args: [formatMarketParams(marketParams), assets, '0', onBehalf, receiver || onBehalf],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: MORPHO_BLUE,
+      method: 'withdraw',
+      abi: MORPHO_ABI,
+      args: [formatMarketParams(marketParams), assets, '0', onBehalf, receiver || onBehalf],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -560,13 +657,18 @@ export async function withdraw(marketParams, { assets, onBehalf, receiver, netwo
 export async function supplyCollateral(marketParams, { assets, onBehalf, network, rpcUrl }) {
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: MORPHO_BLUE,
-    method: 'supplyCollateral',
-    abi: MORPHO_ABI,
-    args: [formatMarketParams(marketParams), assets, onBehalf, '0x'],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: MORPHO_BLUE,
+      method: 'supplyCollateral',
+      abi: MORPHO_ABI,
+      args: [formatMarketParams(marketParams), assets, onBehalf, '0x'],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -579,16 +681,24 @@ export async function supplyCollateral(marketParams, { assets, onBehalf, network
 /**
  * Withdraw collateral from a Morpho Blue market.
  */
-export async function withdrawCollateral(marketParams, { assets, onBehalf, receiver, network, rpcUrl }) {
+export async function withdrawCollateral(
+  marketParams,
+  { assets, onBehalf, receiver, network, rpcUrl },
+) {
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: MORPHO_BLUE,
-    method: 'withdrawCollateral',
-    abi: MORPHO_ABI,
-    args: [formatMarketParams(marketParams), assets, onBehalf, receiver || onBehalf],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: MORPHO_BLUE,
+      method: 'withdrawCollateral',
+      abi: MORPHO_ABI,
+      args: [formatMarketParams(marketParams), assets, onBehalf, receiver || onBehalf],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -604,13 +714,18 @@ export async function withdrawCollateral(marketParams, { assets, onBehalf, recei
 export async function borrow(marketParams, { assets, onBehalf, receiver, network, rpcUrl }) {
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: MORPHO_BLUE,
-    method: 'borrow',
-    abi: MORPHO_ABI,
-    args: [formatMarketParams(marketParams), assets, '0', onBehalf, receiver || onBehalf],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: MORPHO_BLUE,
+      method: 'borrow',
+      abi: MORPHO_ABI,
+      args: [formatMarketParams(marketParams), assets, '0', onBehalf, receiver || onBehalf],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -626,13 +741,18 @@ export async function borrow(marketParams, { assets, onBehalf, receiver, network
 export async function repay(marketParams, { assets, onBehalf, network, rpcUrl }) {
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: MORPHO_BLUE,
-    method: 'repay',
-    abi: MORPHO_ABI,
-    args: [formatMarketParams(marketParams), assets, '0', onBehalf, '0x'],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: MORPHO_BLUE,
+      method: 'repay',
+      abi: MORPHO_ABI,
+      args: [formatMarketParams(marketParams), assets, '0', onBehalf, '0x'],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -651,13 +771,18 @@ export async function liquidate(marketParams, { borrower, seizedAssets, network,
 
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: MORPHO_BLUE,
-    method: 'liquidate',
-    abi: MORPHO_ABI,
-    args: [formatMarketParams(marketParams), borrower, seizedAssets, '0', '0x'],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: MORPHO_BLUE,
+      method: 'liquidate',
+      abi: MORPHO_ABI,
+      args: [formatMarketParams(marketParams), borrower, seizedAssets, '0', '0x'],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -673,12 +798,17 @@ export async function liquidate(marketParams, { borrower, seizedAssets, network,
 export async function accrueInterest(marketParams, { network, rpcUrl }) {
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: MORPHO_BLUE,
-    method: 'function accrueInterest((address, address, address, address, uint256))',
-    args: [formatMarketParams(marketParams)],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: MORPHO_BLUE,
+      method: 'function accrueInterest((address, address, address, address, uint256))',
+      args: [formatMarketParams(marketParams)],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -692,12 +822,17 @@ export async function accrueInterest(marketParams, { network, rpcUrl }) {
 export async function createMarket(marketParams, { network, rpcUrl }) {
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: MORPHO_BLUE,
-    method: 'function createMarket((address, address, address, address, uint256))',
-    args: [formatMarketParams(marketParams)],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: MORPHO_BLUE,
+      method: 'function createMarket((address, address, address, address, uint256))',
+      args: [formatMarketParams(marketParams)],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -714,12 +849,17 @@ export async function setAuthorization({ authorized, isAuthorized, network, rpcU
 
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: MORPHO_BLUE,
-    method: 'function setAuthorization(address, bool)',
-    args: [authorized, isAuthorized ? 'true' : 'false'],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: MORPHO_BLUE,
+      method: 'function setAuthorization(address, bool)',
+      args: [authorized, isAuthorized ? 'true' : 'false'],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -740,13 +880,18 @@ export async function vaultDeposit(vaultAddress, { assets, receiver, network, rp
 
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: vaultAddress,
-    method: 'deposit',
-    abi: VAULT_ABI,
-    args: [assets, receiver],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: vaultAddress,
+      method: 'deposit',
+      abi: VAULT_ABI,
+      args: [assets, receiver],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -766,13 +911,18 @@ export async function vaultWithdraw(vaultAddress, { assets, receiver, owner, net
 
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: vaultAddress,
-    method: 'withdraw',
-    abi: VAULT_ABI,
-    args: [assets, receiver, owner || receiver],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: vaultAddress,
+      method: 'withdraw',
+      abi: VAULT_ABI,
+      args: [assets, receiver, owner || receiver],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),
@@ -792,13 +942,18 @@ export async function vaultRedeem(vaultAddress, { shares, receiver, owner, netwo
 
   const net = resolveNetwork(network, rpcUrl)
 
-  const receipt = await bridge.chain('ethereum', 'call-contract', {
-    contract: vaultAddress,
-    method: 'redeem',
-    abi: VAULT_ABI,
-    args: [shares, receiver, owner || receiver],
-    ...net.params,
-  }, net.network)
+  const receipt = await bridge.chain(
+    'ethereum',
+    'call-contract',
+    {
+      contract: vaultAddress,
+      method: 'redeem',
+      abi: VAULT_ABI,
+      args: [shares, receiver, owner || receiver],
+      ...net.params,
+    },
+    net.network,
+  )
 
   return {
     txHash: extractTxHash(receipt),

@@ -28707,28 +28707,67 @@ async function getVaultBalance(vaultAddress, user, network, { rpcUrl } = {}) {
   }
 }
 
+// ── Write: WETH wrapping ──────────────────────────────────────────
+
+const WETH_ADDRESSES = {
+  ethereum: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+  base: '0x4200000000000000000000000000000000000006',
+  arbitrum: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+  polygon: '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619',
+  optimism: '0x4200000000000000000000000000000000000006',
+}
+
+/**
+ * Wrap native ETH into WETH. Required before supplying ETH as collateral.
+ */
+async function wrapEth({ amount, network, rpcUrl }) {
+  if (!amount) throw new MorphoError('MISSING_AMOUNT', 'amount in wei is required')
+
+  const net = resolveNetwork(network, rpcUrl)
+  const weth = WETH_ADDRESSES[network.toLowerCase()]
+  if (!weth) {
+    throw new MorphoError('UNSUPPORTED_NETWORK', `No WETH address for ${network}`)
+  }
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: weth,
+    method: 'function deposit()',
+    args: [],
+    value: amount,
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    weth,
+    amount,
+    network,
+  }
+}
+
 // ── Write: ERC20 approval ─────────────────────────────────────────
 
 /**
  * Approve Morpho Blue to spend tokens. Required before supply/repay.
  */
-async function approve(token, { amount, network, rpcUrl }) {
+async function approve(token, { amount, spender, network, rpcUrl }) {
   if (!token) throw new MorphoError('MISSING_TOKEN', 'token address is required')
   if (!amount) throw new MorphoError('MISSING_AMOUNT', 'amount is required')
 
   const net = resolveNetwork(network, rpcUrl)
+  const target = spender || MORPHO_BLUE
 
   const receipt = await bridge.chain('ethereum', 'call-contract', {
     contract: token,
     method: 'function approve(address, uint256) returns (bool)',
-    args: [MORPHO_BLUE, amount],
+    args: [target, amount],
     ...net.params,
   }, net.network)
 
   return {
     txHash: extractTxHash(receipt),
     token,
-    spender: MORPHO_BLUE,
+    spender: target,
     amount,
     network,
   }
@@ -28798,6 +28837,28 @@ async function supplyCollateral(marketParams, { assets, onBehalf, network, rpcUr
     method: 'supplyCollateral',
     abi: MORPHO_ABI,
     args: [formatMarketParams(marketParams), assets, onBehalf, '0x'],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    assets,
+    onBehalf,
+    network,
+  }
+}
+
+/**
+ * Withdraw collateral from a Morpho Blue market.
+ */
+async function withdrawCollateral(marketParams, { assets, onBehalf, receiver, network, rpcUrl }) {
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: MORPHO_BLUE,
+    method: 'withdrawCollateral',
+    abi: MORPHO_ABI,
+    args: [formatMarketParams(marketParams), assets, onBehalf, receiver || onBehalf],
     ...net.params,
   }, net.network)
 
@@ -28998,6 +29059,16 @@ const handlers = {
   approve: async () => {
     const result = await approve(lib_core.getInput('asset', { required: true }), {
       amount: lib_core.getInput('amount', { required: true }),
+      spender: lib_core.getInput('spender') || undefined,
+      network: lib_core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
+  'wrap-eth': async () => {
+    const result = await wrapEth({
+      amount: lib_core.getInput('amount', { required: true }),
       network: lib_core.getInput('network', { required: true }),
       rpcUrl: rpcUrl(),
     })
@@ -29031,6 +29102,17 @@ const handlers = {
     const result = await supplyCollateral(marketParamsFromInputs(), {
       assets: lib_core.getInput('amount', { required: true }),
       onBehalf: lib_core.getInput('on-behalf-of', { required: true }),
+      network: lib_core.getInput('network', { required: true }),
+      rpcUrl: rpcUrl(),
+    })
+    setJsonOutput('result', result)
+  },
+
+  'withdraw-collateral': async () => {
+    const result = await withdrawCollateral(marketParamsFromInputs(), {
+      assets: lib_core.getInput('amount', { required: true }),
+      onBehalf: lib_core.getInput('on-behalf-of', { required: true }),
+      receiver: lib_core.getInput('receiver') || undefined,
       network: lib_core.getInput('network', { required: true }),
       rpcUrl: rpcUrl(),
     })

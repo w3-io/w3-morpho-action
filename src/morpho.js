@@ -472,6 +472,28 @@ export async function supplyCollateral(marketParams, { assets, onBehalf, network
 }
 
 /**
+ * Withdraw collateral from a Morpho Blue market.
+ */
+export async function withdrawCollateral(marketParams, { assets, onBehalf, receiver, network, rpcUrl }) {
+  const net = resolveNetwork(network, rpcUrl)
+
+  const receipt = await bridge.chain('ethereum', 'call-contract', {
+    contract: MORPHO_BLUE,
+    method: 'withdrawCollateral',
+    abi: MORPHO_ABI,
+    args: [formatMarketParams(marketParams), assets, onBehalf, receiver || onBehalf],
+    ...net.params,
+  }, net.network)
+
+  return {
+    txHash: extractTxHash(receipt),
+    assets,
+    onBehalf,
+    network,
+  }
+}
+
+/**
  * Borrow assets from a Morpho Blue market.
  */
 export async function borrow(marketParams, { assets, onBehalf, receiver, network, rpcUrl }) {

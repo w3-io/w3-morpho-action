@@ -28592,8 +28592,7 @@ async function listMarkets(network, { first = 20, rpcUrl } = {}) {
 
   const json = await request(MORPHO_API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query }),
+    body: { query },
   })
   const items = json?.data?.markets?.items || []
 

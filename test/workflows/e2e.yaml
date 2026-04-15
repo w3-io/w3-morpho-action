@@ -121,7 +121,7 @@ jobs:
           echo "=== Vault Info ==="
           echo "${{ steps.vault-info.outputs.result }}"
           echo "=== Vault Balance ==="
-          echo "(skipped)"
+          echo "${{ steps.vault-balance.outputs.result }}"
 
   # ── Write: helpers ──────────────────────────────────────────────
   helpers:
@@ -362,17 +362,15 @@ jobs:
           receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
-      # SKIP: vault-balance reverts with arithmetic overflow on this vault
-      # 
-      #       # 3. Check vault balance
-      #       - uses: w3-io/w3-morpho-action@main
-      #         id: vault-bal
-      #         with:
-      #           command: vault-balance
-      #           vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
-      #           user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
-      #           network: base
-      #           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+      # 3. Check vault balance after deposit
+      - uses: w3-io/w3-morpho-action@main
+        id: vault-bal
+        with:
+          command: vault-balance
+          vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 4. Redeem shares from vault
       - uses: w3-io/w3-morpho-action@main
@@ -410,69 +408,69 @@ jobs:
           echo "=== Vault Deposit ==="
           echo "${{ steps.vault-deposit.outputs.result }}"
           echo "=== Vault Balance ==="
-          echo "(vault-balance skipped)"
+          echo "${{ steps.vault-bal.outputs.result }}"
           echo "=== Vault Redeem ==="
           echo "${{ steps.vault-redeem.outputs.result }}"
 
   # ── Write: supply to Blue market (direct lending) ───────────────
-  #   blue-supply:
-  #     runs-on: ubuntu-latest
-  #     steps:
-  #       # 1. Approve USDC for Morpho Blue
-  #       - uses: w3-io/w3-morpho-action@main
-  #         id: approve
-  #         env:
-  #           W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
-  #         bridge-allow:
-  #           - ethereum/call-contract
-  #         with:
-  #           command: approve
-  #           asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-  #           amount: '10000'
-  #           network: base
-  #           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
-  # 
-  #       # 2. Supply USDC to the market
-  #       - uses: w3-io/w3-morpho-action@main
-  #         id: supply
-  #         env:
-  #           W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
-  #         bridge-allow:
-  #           - ethereum/call-contract
-  #         with:
-  #           command: supply
-  #           loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-  #           collateral-token: '0x4200000000000000000000000000000000000006'
-  #           oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
-  #           irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
-  #           lltv: '860000000000000000'
-  #           amount: '10000'
-  #           on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
-  #           network: base
-  #           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
-  # 
-  #       # SKIP: requires premium RPC to avoid rate limits
-  #       # - uses: w3-io/w3-morpho-action@main
-  #       #   id: withdraw
-  #       #   env:
-  #       #     W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
-  #       #   bridge-allow:
-  #       #     - ethereum/call-contract
-  #       #   with:
-  #       #     command: withdraw
-  #       #     loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-  #       #     collateral-token: '0x4200000000000000000000000000000000000006'
-  #       #     oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
-  #       #     irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
-  #       #     lltv: '860000000000000000'
-  #       #     amount: '10000'
-  #       #     on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
-  #       #     receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
-  #       #     network: base
-  #       #     rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
-  # 
-  #       - run: |
-  #           echo "=== Approve ==="
-  #           echo "${{ steps.approve.outputs.result }}"
-  #           echo "=== Supply ==="
-  #           echo "${{ steps.supply.outputs.result }}"
+  blue-supply:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Approve USDC for Morpho Blue
+      - uses: w3-io/w3-morpho-action@main
+        id: approve
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: approve
+          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          amount: '10000'
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+
+      # 2. Supply USDC to the market
+      - uses: w3-io/w3-morpho-action@main
+        id: supply
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: supply
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '10000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+
+      # SKIP: withdraw requires premium RPC to avoid rate limits
+      # - uses: w3-io/w3-morpho-action@main
+      #   id: withdraw
+      #   env:
+      #     W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+      #   bridge-allow:
+      #     - ethereum/call-contract
+      #   with:
+      #     command: withdraw
+      #     loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+      #     collateral-token: '0x4200000000000000000000000000000000000006'
+      #     oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+      #     irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+      #     lltv: '860000000000000000'
+      #     amount: '10000'
+      #     on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+      #     receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+      #     network: base
+      #     rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+
+      - run: |
+          echo "=== Approve ==="
+          echo "${{ steps.approve.outputs.result }}"
+          echo "=== Supply ==="
+          echo "${{ steps.supply.outputs.result }}"

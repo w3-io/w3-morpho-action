@@ -1,4 +1,5 @@
 # E2E Test Workflow
+# Recovery: all write tests round-trip to recover funds. Only gas is consumed.
 #
 # Exercises every command against real APIs/contracts.
 # Run on a local W3 network with:
@@ -273,6 +274,18 @@ jobs:
           market-id: '0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda'
           network: base
 
+      # 9. Recovery: unwrap WETH back to ETH
+      - uses: w3-io/w3-morpho-action@main
+        id: unwrap-recovery
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: unwrap-eth
+          amount: '50000000000000'
+          network: base
+
       - run: |
           echo "=== Wrap ==="
           echo "${{ steps.wrap.outputs.result }}"
@@ -288,6 +301,8 @@ jobs:
           echo "${{ steps.withdraw-collateral.outputs.result }}"
           echo "=== Accrue Interest ==="
           echo "${{ steps.accrue.outputs.result }}"
+          echo "=== Unwrap Recovery ==="
+          echo "${{ steps.unwrap-recovery.outputs.result }}"
 
   # ── Write: Vault lifecycle (if funded) ──────────────────────────
   vault-lifecycle:

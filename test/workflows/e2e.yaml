@@ -1,0 +1,432 @@
+# E2E Test Workflow
+#
+# Exercises every command against real APIs/contracts.
+# Run on a local W3 network with:
+#   w3 workflow deploy test/workflows/e2e.yaml
+#   w3 workflow "Morpho E2E" trigger
+#
+# Prerequisites:
+#   - W3 local network running (make dev)
+#   - W3_SECRET_ETHEREUM (bridge signer with ETH + USDC on Base)
+#
+# Addresses (Base mainnet):
+#   Morpho Blue: 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb
+#   USDC:        0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+#   WETH:        0x4200000000000000000000000000000000000006
+#   Steakhouse Prime vault: 0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2
+#
+# Market: USDC/WETH (86% LLTV)
+#   market-id: 0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda
+
+name: Morpho E2E
+on:
+  workflow_dispatch: {}
+
+jobs:
+  # ── Read-only commands ──────────────────────────────────────────
+  reads:
+    runs-on: ubuntu-latest
+    steps:
+      # get-market
+      - uses: w3-io/w3-morpho-action@main
+        id: get-market
+        with:
+          command: get-market
+          market-id: '0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda'
+          network: base
+
+      # get-market-params
+      - uses: w3-io/w3-morpho-action@main
+        id: get-market-params
+        with:
+          command: get-market-params
+          market-id: '0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda'
+          network: base
+
+      # list-markets
+      - uses: w3-io/w3-morpho-action@main
+        id: list-markets
+        with:
+          command: list-markets
+          network: base
+          limit: '5'
+
+      # get-position
+      - uses: w3-io/w3-morpho-action@main
+        id: get-position
+        with:
+          command: get-position
+          market-id: '0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda'
+          user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+
+      # get-allowance
+      - uses: w3-io/w3-morpho-action@main
+        id: get-allowance
+        with:
+          command: get-allowance
+          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+
+      # list-vaults
+      - uses: w3-io/w3-morpho-action@main
+        id: list-vaults
+        with:
+          command: list-vaults
+          network: base
+          limit: '5'
+
+      # vault-info
+      - uses: w3-io/w3-morpho-action@main
+        id: vault-info
+        with:
+          command: vault-info
+          vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          network: base
+
+      # vault-balance
+      - uses: w3-io/w3-morpho-action@main
+        id: vault-balance
+        with:
+          command: vault-balance
+          vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+
+      - run: |
+          echo "=== Get Market ==="
+          echo "${{ steps.get-market.outputs.result }}"
+          echo "=== Get Market Params ==="
+          echo "${{ steps.get-market-params.outputs.result }}"
+          echo "=== List Markets ==="
+          echo "${{ steps.list-markets.outputs.result }}"
+          echo "=== Get Position ==="
+          echo "${{ steps.get-position.outputs.result }}"
+          echo "=== Get Allowance ==="
+          echo "${{ steps.get-allowance.outputs.result }}"
+          echo "=== List Vaults ==="
+          echo "${{ steps.list-vaults.outputs.result }}"
+          echo "=== Vault Info ==="
+          echo "${{ steps.vault-info.outputs.result }}"
+          echo "=== Vault Balance ==="
+          echo "${{ steps.vault-balance.outputs.result }}"
+
+  # ── Write: helpers ──────────────────────────────────────────────
+  helpers:
+    runs-on: ubuntu-latest
+    steps:
+      # wrap-eth
+      - uses: w3-io/w3-morpho-action@main
+        id: wrap
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: wrap-eth
+          amount: '10000000000000'
+          network: base
+
+      # unwrap-eth
+      - uses: w3-io/w3-morpho-action@main
+        id: unwrap
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: unwrap-eth
+          amount: '10000000000000'
+          network: base
+
+      - run: |
+          echo "=== Wrap ETH ==="
+          echo "${{ steps.wrap.outputs.result }}"
+          echo "=== Unwrap ETH ==="
+          echo "${{ steps.unwrap.outputs.result }}"
+
+  # ── Write: Blue lending lifecycle (if funded) ───────────────────
+  # approve -> supply-collateral -> borrow -> repay -> withdraw-collateral
+  blue-lifecycle:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Wrap ETH to WETH for collateral
+      - uses: w3-io/w3-morpho-action@main
+        id: wrap
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: wrap-eth
+          amount: '50000000000000'
+          network: base
+
+      # 2. Approve WETH for Morpho Blue
+      - uses: w3-io/w3-morpho-action@main
+        id: approve-weth
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: approve
+          asset: '0x4200000000000000000000000000000000000006'
+          amount: '50000000000000'
+          network: base
+
+      # 3. Supply WETH as collateral
+      - uses: w3-io/w3-morpho-action@main
+        id: supply-collateral
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: supply-collateral
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '50000000000000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+
+      # 4. Borrow USDC against collateral
+      - uses: w3-io/w3-morpho-action@main
+        id: borrow
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: borrow
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '1000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+
+      # 5. Approve USDC for repay
+      - uses: w3-io/w3-morpho-action@main
+        id: approve-usdc
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: approve
+          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          amount: '10000'
+          network: base
+
+      # 6. Repay borrowed USDC
+      - uses: w3-io/w3-morpho-action@main
+        id: repay
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: repay
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '1000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+
+      # 7. Withdraw collateral
+      - uses: w3-io/w3-morpho-action@main
+        id: withdraw-collateral
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: withdraw-collateral
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '50000000000000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+
+      # 8. Accrue interest on the market
+      - uses: w3-io/w3-morpho-action@main
+        id: accrue
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: accrue-interest
+          market-id: '0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda'
+          network: base
+
+      - run: |
+          echo "=== Wrap ==="
+          echo "${{ steps.wrap.outputs.result }}"
+          echo "=== Approve WETH ==="
+          echo "${{ steps.approve-weth.outputs.result }}"
+          echo "=== Supply Collateral ==="
+          echo "${{ steps.supply-collateral.outputs.result }}"
+          echo "=== Borrow ==="
+          echo "${{ steps.borrow.outputs.result }}"
+          echo "=== Repay ==="
+          echo "${{ steps.repay.outputs.result }}"
+          echo "=== Withdraw Collateral ==="
+          echo "${{ steps.withdraw-collateral.outputs.result }}"
+          echo "=== Accrue Interest ==="
+          echo "${{ steps.accrue.outputs.result }}"
+
+  # ── Write: Vault lifecycle (if funded) ──────────────────────────
+  vault-lifecycle:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Approve USDC for vault
+      - uses: w3-io/w3-morpho-action@main
+        id: approve-vault
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: approve
+          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          spender: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          amount: '10000'
+          network: base
+
+      # 2. Deposit into vault
+      - uses: w3-io/w3-morpho-action@main
+        id: vault-deposit
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: vault-deposit
+          vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          amount: '10000'
+          receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+
+      # 3. Check vault balance
+      - uses: w3-io/w3-morpho-action@main
+        id: vault-bal
+        with:
+          command: vault-balance
+          vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+
+      # 4. Redeem shares from vault
+      - uses: w3-io/w3-morpho-action@main
+        id: vault-redeem
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: vault-redeem
+          vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+          shares: ${{ fromJSON(steps.vault-bal.outputs.result).shares }}
+          receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          owner: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+
+      # 5. Withdraw from vault (alternative to redeem)
+      # - uses: w3-io/w3-morpho-action@main
+      #   id: vault-withdraw
+      #   env:
+      #     W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+      #   bridge-allow:
+      #     - ethereum/call-contract
+      #   with:
+      #     command: vault-withdraw
+      #     vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
+      #     amount: '10000'
+      #     receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+      #     network: base
+
+      - run: |
+          echo "=== Approve Vault ==="
+          echo "${{ steps.approve-vault.outputs.result }}"
+          echo "=== Vault Deposit ==="
+          echo "${{ steps.vault-deposit.outputs.result }}"
+          echo "=== Vault Balance ==="
+          echo "${{ steps.vault-bal.outputs.result }}"
+          echo "=== Vault Redeem ==="
+          echo "${{ steps.vault-redeem.outputs.result }}"
+
+  # ── Write: supply to Blue market (direct lending) ───────────────
+  blue-supply:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Approve USDC for Morpho Blue
+      - uses: w3-io/w3-morpho-action@main
+        id: approve
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: approve
+          asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          amount: '10000'
+          network: base
+
+      # 2. Supply USDC to the market
+      - uses: w3-io/w3-morpho-action@main
+        id: supply
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: supply
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '10000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+
+      # 3. Withdraw supplied USDC
+      - uses: w3-io/w3-morpho-action@main
+        id: withdraw
+        env:
+          W3_SECRET_ETHEREUM: ${{ secrets.W3_SECRET_ETHEREUM }}
+        bridge-allow:
+          - ethereum/call-contract
+        with:
+          command: withdraw
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
+          amount: '10000'
+          on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
+          network: base
+
+      - run: |
+          echo "=== Approve ==="
+          echo "${{ steps.approve.outputs.result }}"
+          echo "=== Supply ==="
+          echo "${{ steps.supply.outputs.result }}"
+          echo "=== Withdraw ==="
+          echo "${{ steps.withdraw.outputs.result }}"

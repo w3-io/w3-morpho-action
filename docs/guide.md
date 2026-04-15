@@ -331,3 +331,11 @@ All commands except `liquidate` (requires unhealthy position) and `create-market
 npm test     # mocked bridge tests
 npm run all  # format + lint + test + build
 ```
+
+---
+
+## Future Work
+
+- **Liquidation automation** — The `liquidate` command exists but practical use requires flash loans or pre-funded positions to repay the borrower's debt atomically. A bundled liquidation flow (flash-borrow, repay, seize, repay flash) would make this actionable.
+- **Morpho Optimizers** — The legacy Morpho Optimizer contracts (v1) are deprecated and not planned for integration. Blue is the successor.
+- **MetaMorpho vault creation** — Creating new MetaMorpho vaults is an admin-only operation requiring governance setup, market curation, and fee configuration. Too niche for general integration.

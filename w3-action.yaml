@@ -1,44 +1,848 @@
-# TODO: This file describes your action for the W3 MCP server.
-# AI agents use this to discover your action, understand its commands,
-# and generate correct workflow YAML. Keep it in sync with action.yml.
-#
-# On release, this file is synced to the MCP's registry.yaml.
-
-kind: integration # integration | primitive | utility
-partner: yourpartner # TODO: machine-readable partner ID
-name: YourPartner Integration # TODO: human-readable name
-version: 1.0.0
-repo: w3-io/w3-yourpartner-action # TODO: your repo
+kind: integration
+partner: morpho
+name: Morpho Blue Integration
+version: 0.1.0
+repo: w3-io/w3-morpho-action
 
 commands:
-  # TODO: Define each command your action supports. Example:
-  #
-  # - name: inspect
-  #   description: >
-  #     Risk assessment for a blockchain address. Returns per-chain
-  #     scores for fraud, compliance, and cyber risk.
-  #   inputs:
-  #     address:
-  #       type: string
-  #       required: true
-  #       description: Blockchain address to inspect
-  #     chain-id:
-  #       type: string
-  #       required: false
-  #       description: Filter to a specific chain
-  #   outputs:
-  #     result:
-  #       type: object
-  #       description: Full risk score breakdown
+  # ── Blue: Market reads ────────────────────────────────────────────
 
-  - name: example-command
-    description: TODO - describe what this command does
+  - name: get-market
+    description: >
+      Get market state by ID — total supply, borrow, utilization rate,
+      fee, and last update timestamp.
     inputs:
-      input:
+      market-id:
         type: string
         required: true
-        description: TODO - describe this input
+        description: Morpho Blue market ID (bytes32 hash)
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
     outputs:
       result:
         type: object
-        description: TODO - describe the output shape
+        description: >
+          Market state with marketId, network, totalSupplyAssets,
+          totalSupplyShares, totalBorrowAssets, totalBorrowShares,
+          utilization, lastUpdate, fee
+
+  - name: get-market-params
+    description: >
+      Get the five market parameters (loan token, collateral token,
+      oracle, IRM, LLTV) from a market ID. Use this to look up params
+      needed by write commands.
+    inputs:
+      market-id:
+        type: string
+        required: true
+        description: Morpho Blue market ID (bytes32 hash)
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Market params with marketId, network, loanToken,
+          collateralToken, oracle, irm, lltv
+
+  - name: get-position
+    description: >
+      Get a user's position in a specific market — supply shares,
+      borrow shares, and collateral balance.
+    inputs:
+      market-id:
+        type: string
+        required: true
+        description: Morpho Blue market ID (bytes32 hash)
+      user:
+        type: string
+        required: true
+        description: User wallet address
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Position with marketId, user, network, supplyShares,
+          borrowShares, collateral
+
+  - name: list-markets
+    description: >
+      List Morpho Blue markets from the GraphQL API, sorted by total
+      supply in USD. Returns pricing, APYs, and LLTV for each market.
+    inputs:
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      limit:
+        type: string
+        required: false
+        description: Number of markets to return (default 20)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Object with network, count, and markets array containing
+          marketId, loanAsset, collateralAsset, supplyUsd, borrowUsd,
+          supplyApy, borrowApy, lltv
+
+  - name: get-allowance
+    description: >
+      Check ERC20 token allowance granted to Morpho Blue or a specific
+      spender address.
+    inputs:
+      asset:
+        type: string
+        required: true
+        description: ERC20 token contract address
+      user:
+        type: string
+        required: true
+        description: Token owner address
+      spender:
+        type: string
+        required: false
+        description: Spender address (defaults to Morpho Blue contract)
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Allowance with token, owner, spender, allowance, network
+
+  # ── Vault: Read ───────────────────────────────────────────────────
+
+  - name: vault-info
+    description: >
+      Get MetaMorpho vault metadata — name, symbol, underlying asset
+      address, and total deposited assets.
+    inputs:
+      vault-address:
+        type: string
+        required: true
+        description: MetaMorpho vault contract address
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Vault metadata with vaultAddress, network, name, symbol,
+          asset, totalAssets
+
+  - name: vault-balance
+    description: >
+      Get a user's vault position — shares held and their equivalent
+      value in underlying assets.
+    inputs:
+      vault-address:
+        type: string
+        required: true
+        description: MetaMorpho vault contract address
+      user:
+        type: string
+        required: true
+        description: User wallet address
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Balance with vaultAddress, user, network, shares, assets
+
+  - name: list-vaults
+    description: >
+      List MetaMorpho vaults from the GraphQL API, sorted by total
+      assets in USD. Returns name, symbol, asset, TVL, and APY.
+    inputs:
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      limit:
+        type: string
+        required: false
+        description: Number of vaults to return (default 20)
+    outputs:
+      result:
+        type: object
+        description: >
+          Object with network, count, and vaults array containing
+          address, name, symbol, asset, totalAssetsUsd, apy
+
+  # ── ERC20 / WETH utilities ───────────────────────────────────────
+
+  - name: approve
+    description: >
+      Approve Morpho Blue or a vault to spend ERC20 tokens. Required
+      before supply, repay, or vault deposit.
+    inputs:
+      asset:
+        type: string
+        required: true
+        description: ERC20 token contract address to approve
+      amount:
+        type: string
+        required: true
+        description: Amount to approve in base units
+      spender:
+        type: string
+        required: false
+        description: Spender address (defaults to Morpho Blue contract)
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Transaction result with txHash, token, spender, amount,
+          network
+
+  - name: wrap-eth
+    description: >
+      Wrap native ETH into WETH. Required before supplying ETH as
+      collateral on Morpho Blue.
+    inputs:
+      amount:
+        type: string
+        required: true
+        description: Amount of ETH to wrap in wei
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: Transaction result with txHash, weth, amount, network
+
+  - name: unwrap-eth
+    description: >
+      Unwrap WETH back to native ETH.
+    inputs:
+      amount:
+        type: string
+        required: true
+        description: Amount of WETH to unwrap in wei
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: Transaction result with txHash, weth, amount, network
+
+  # ── Blue: Supply / Withdraw ───────────────────────────────────────
+
+  - name: supply
+    description: >
+      Supply loan assets to a Morpho Blue market to earn yield.
+      Requires prior ERC20 approval of the loan token.
+    inputs:
+      loan-token:
+        type: string
+        required: true
+        description: Loan token address (market param)
+      collateral-token:
+        type: string
+        required: true
+        description: Collateral token address (market param)
+      oracle:
+        type: string
+        required: true
+        description: Oracle contract address (market param)
+      irm:
+        type: string
+        required: true
+        description: Interest rate model address (market param)
+      lltv:
+        type: string
+        required: true
+        description: Liquidation LTV in wei, e.g. 860000000000000000 for 86%
+      amount:
+        type: string
+        required: true
+        description: Amount of loan tokens to supply in base units
+      on-behalf-of:
+        type: string
+        required: true
+        description: Address to credit the supply position
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: Transaction result with txHash, assets, onBehalf, network
+
+  - name: withdraw
+    description: >
+      Withdraw supplied loan assets from a Morpho Blue market.
+    inputs:
+      loan-token:
+        type: string
+        required: true
+        description: Loan token address (market param)
+      collateral-token:
+        type: string
+        required: true
+        description: Collateral token address (market param)
+      oracle:
+        type: string
+        required: true
+        description: Oracle contract address (market param)
+      irm:
+        type: string
+        required: true
+        description: Interest rate model address (market param)
+      lltv:
+        type: string
+        required: true
+        description: Liquidation LTV in wei, e.g. 860000000000000000 for 86%
+      amount:
+        type: string
+        required: true
+        description: Amount of loan tokens to withdraw in base units
+      on-behalf-of:
+        type: string
+        required: true
+        description: Position owner address
+      receiver:
+        type: string
+        required: false
+        description: Address to receive withdrawn assets (defaults to on-behalf-of)
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: Transaction result with txHash, assets, onBehalf, network
+
+  - name: supply-collateral
+    description: >
+      Deposit collateral into a Morpho Blue market to enable borrowing.
+      Requires prior ERC20 approval of the collateral token.
+    inputs:
+      loan-token:
+        type: string
+        required: true
+        description: Loan token address (market param)
+      collateral-token:
+        type: string
+        required: true
+        description: Collateral token address (market param)
+      oracle:
+        type: string
+        required: true
+        description: Oracle contract address (market param)
+      irm:
+        type: string
+        required: true
+        description: Interest rate model address (market param)
+      lltv:
+        type: string
+        required: true
+        description: Liquidation LTV in wei, e.g. 860000000000000000 for 86%
+      amount:
+        type: string
+        required: true
+        description: Amount of collateral tokens in base units
+      on-behalf-of:
+        type: string
+        required: true
+        description: Address to credit the collateral
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: Transaction result with txHash, assets, onBehalf, network
+
+  - name: withdraw-collateral
+    description: >
+      Withdraw collateral from a Morpho Blue market. Position must
+      remain healthy after withdrawal.
+    inputs:
+      loan-token:
+        type: string
+        required: true
+        description: Loan token address (market param)
+      collateral-token:
+        type: string
+        required: true
+        description: Collateral token address (market param)
+      oracle:
+        type: string
+        required: true
+        description: Oracle contract address (market param)
+      irm:
+        type: string
+        required: true
+        description: Interest rate model address (market param)
+      lltv:
+        type: string
+        required: true
+        description: Liquidation LTV in wei, e.g. 860000000000000000 for 86%
+      amount:
+        type: string
+        required: true
+        description: Amount of collateral to withdraw in base units
+      on-behalf-of:
+        type: string
+        required: true
+        description: Position owner address
+      receiver:
+        type: string
+        required: false
+        description: Address to receive collateral (defaults to on-behalf-of)
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: Transaction result with txHash, assets, onBehalf, network
+
+  # ── Blue: Borrow / Repay ──────────────────────────────────────────
+
+  - name: borrow
+    description: >
+      Borrow loan assets against supplied collateral in a Morpho Blue
+      market. Must have sufficient collateral to maintain health.
+    inputs:
+      loan-token:
+        type: string
+        required: true
+        description: Loan token address (market param)
+      collateral-token:
+        type: string
+        required: true
+        description: Collateral token address (market param)
+      oracle:
+        type: string
+        required: true
+        description: Oracle contract address (market param)
+      irm:
+        type: string
+        required: true
+        description: Interest rate model address (market param)
+      lltv:
+        type: string
+        required: true
+        description: Liquidation LTV in wei, e.g. 860000000000000000 for 86%
+      amount:
+        type: string
+        required: true
+        description: Amount to borrow in base units
+      on-behalf-of:
+        type: string
+        required: true
+        description: Borrower address (must have collateral)
+      receiver:
+        type: string
+        required: false
+        description: Address to receive borrowed assets (defaults to on-behalf-of)
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: Transaction result with txHash, assets, onBehalf, network
+
+  - name: repay
+    description: >
+      Repay borrowed assets on a Morpho Blue market. Requires prior
+      ERC20 approval of the loan token.
+    inputs:
+      loan-token:
+        type: string
+        required: true
+        description: Loan token address (market param)
+      collateral-token:
+        type: string
+        required: true
+        description: Collateral token address (market param)
+      oracle:
+        type: string
+        required: true
+        description: Oracle contract address (market param)
+      irm:
+        type: string
+        required: true
+        description: Interest rate model address (market param)
+      lltv:
+        type: string
+        required: true
+        description: Liquidation LTV in wei, e.g. 860000000000000000 for 86%
+      amount:
+        type: string
+        required: true
+        description: Amount to repay in base units
+      on-behalf-of:
+        type: string
+        required: true
+        description: Borrower address whose debt to repay
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: Transaction result with txHash, assets, onBehalf, network
+
+  # ── Blue: Liquidation ─────────────────────────────────────────────
+
+  - name: liquidate
+    description: >
+      Liquidate an unhealthy position. The caller repays part of the
+      borrower's debt and seizes collateral plus a liquidation bonus.
+    inputs:
+      loan-token:
+        type: string
+        required: true
+        description: Loan token address (market param)
+      collateral-token:
+        type: string
+        required: true
+        description: Collateral token address (market param)
+      oracle:
+        type: string
+        required: true
+        description: Oracle contract address (market param)
+      irm:
+        type: string
+        required: true
+        description: Interest rate model address (market param)
+      lltv:
+        type: string
+        required: true
+        description: Liquidation LTV in wei, e.g. 860000000000000000 for 86%
+      borrower:
+        type: string
+        required: true
+        description: Address of the unhealthy position to liquidate
+      seized-assets:
+        type: string
+        required: true
+        description: Amount of collateral to seize in base units
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Transaction result with txHash, borrower, seizedAssets,
+          network
+
+  # ── Blue: Protocol operations ─────────────────────────────────────
+
+  - name: accrue-interest
+    description: >
+      Force interest accrual on a market. Call before reads when you
+      need up-to-the-block-accurate balances.
+    inputs:
+      loan-token:
+        type: string
+        required: true
+        description: Loan token address (market param)
+      collateral-token:
+        type: string
+        required: true
+        description: Collateral token address (market param)
+      oracle:
+        type: string
+        required: true
+        description: Oracle contract address (market param)
+      irm:
+        type: string
+        required: true
+        description: Interest rate model address (market param)
+      lltv:
+        type: string
+        required: true
+        description: Liquidation LTV in wei, e.g. 860000000000000000 for 86%
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: Transaction result with txHash, network
+
+  - name: create-market
+    description: >
+      Create a new Morpho Blue market. Permissionless — anyone can
+      create markets with any token pair, oracle, and IRM. Irreversible.
+    inputs:
+      loan-token:
+        type: string
+        required: true
+        description: Loan token address (market param)
+      collateral-token:
+        type: string
+        required: true
+        description: Collateral token address (market param)
+      oracle:
+        type: string
+        required: true
+        description: Oracle contract address (market param)
+      irm:
+        type: string
+        required: true
+        description: Interest rate model address (market param)
+      lltv:
+        type: string
+        required: true
+        description: Liquidation LTV in wei, e.g. 860000000000000000 for 86%
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Transaction result with txHash, marketParams, network
+
+  - name: set-authorization
+    description: >
+      Authorize or revoke another address to manage your Morpho Blue
+      positions (supply, withdraw, borrow, repay on your behalf).
+    inputs:
+      authorized:
+        type: string
+        required: true
+        description: Address to authorize or revoke
+      is-authorized:
+        type: string
+        required: false
+        description: >
+          Set to "true" to authorize (default) or "false" to revoke
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Transaction result with txHash, authorized, isAuthorized,
+          network
+
+  # ── Vault: Write ──────────────────────────────────────────────────
+
+  - name: vault-deposit
+    description: >
+      Deposit assets into a MetaMorpho vault for passive yield. The
+      vault allocates across curated Morpho Blue markets. Requires
+      prior ERC20 approval of the underlying asset for the vault.
+    inputs:
+      vault-address:
+        type: string
+        required: true
+        description: MetaMorpho vault contract address
+      amount:
+        type: string
+        required: true
+        description: Amount of underlying assets to deposit in base units
+      receiver:
+        type: string
+        required: true
+        description: Address to receive vault shares
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Transaction result with txHash, vaultAddress, assets,
+          receiver, network
+
+  - name: vault-withdraw
+    description: >
+      Withdraw assets from a MetaMorpho vault. Specify the amount of
+      underlying assets to receive (asset-denominated).
+    inputs:
+      vault-address:
+        type: string
+        required: true
+        description: MetaMorpho vault contract address
+      amount:
+        type: string
+        required: true
+        description: Amount of underlying assets to withdraw in base units
+      receiver:
+        type: string
+        required: true
+        description: Address to receive the withdrawn assets
+      owner:
+        type: string
+        required: false
+        description: Share owner address (defaults to receiver)
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Transaction result with txHash, vaultAddress, assets,
+          receiver, network
+
+  - name: vault-redeem
+    description: >
+      Redeem vault shares for underlying assets. Specify the number of
+      shares to burn (share-denominated withdrawal).
+    inputs:
+      vault-address:
+        type: string
+        required: true
+        description: MetaMorpho vault contract address
+      shares:
+        type: string
+        required: true
+        description: Number of vault shares to redeem
+      receiver:
+        type: string
+        required: true
+        description: Address to receive the underlying assets
+      owner:
+        type: string
+        required: false
+        description: Share owner address (defaults to receiver)
+      network:
+        type: string
+        required: true
+        description: Target network (ethereum, base, arbitrum, polygon, optimism)
+      rpc-url:
+        type: string
+        required: false
+        description: Custom RPC endpoint URL
+    outputs:
+      result:
+        type: object
+        description: >
+          Transaction result with txHash, vaultAddress, shares,
+          receiver, network

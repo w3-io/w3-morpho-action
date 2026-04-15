@@ -1,0 +1,406 @@
+name: Test Morpho Action
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [audie/*]
+
+# Known Base market: USDC/WETH with Morpho Blue on Base
+# Vault: Steakhouse USDC (0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB)
+env:
+  # Base USDC/WETH market params from README
+  LOAN_TOKEN: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+  COLLATERAL_TOKEN: "0x4200000000000000000000000000000000000006"
+  ORACLE: "0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4"
+  IRM: "0x46415998764C29aB2a25CbeA6254146D50D22687"
+  LLTV: "860000000000000000"
+  VAULT: "0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB"
+  ZERO_ADDR: "0x0000000000000000000000000000000000000000"
+
+jobs:
+  read-operations:
+    name: Read operations (no signer needed)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Blue: Read ──────────────────────────────────────────────────
+
+      - name: list-markets
+        uses: ./
+        id: list_markets
+        with:
+          command: list-markets
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          limit: "5"
+
+      - name: Verify list-markets
+        run: echo '${{ steps.list_markets.outputs.result }}' | jq -e 'length > 0'
+
+      - name: Extract market ID
+        id: market
+        run: |
+          MARKET_ID=$(echo '${{ steps.list_markets.outputs.result }}' | jq -r '.[0].uniqueKey')
+          echo "id=$MARKET_ID" >> "$GITHUB_OUTPUT"
+
+      - name: get-market
+        uses: ./
+        id: get_market
+        with:
+          command: get-market
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          market-id: ${{ steps.market.outputs.id }}
+
+      - name: Verify get-market
+        run: echo '${{ steps.get_market.outputs.result }}' | jq -e '.totalSupplyAssets'
+
+      - name: get-market-params
+        uses: ./
+        id: get_market_params
+        with:
+          command: get-market-params
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          market-id: ${{ steps.market.outputs.id }}
+
+      - name: Verify get-market-params
+        run: echo '${{ steps.get_market_params.outputs.result }}' | jq -e '.loanToken'
+
+      - name: get-position
+        uses: ./
+        id: get_position
+        with:
+          command: get-position
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          market-id: ${{ steps.market.outputs.id }}
+          user: ${{ env.ZERO_ADDR }}
+
+      - name: Verify get-position
+        run: echo '${{ steps.get_position.outputs.result }}' | jq .
+
+      - name: get-allowance
+        uses: ./
+        id: get_allowance
+        with:
+          command: get-allowance
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          asset: ${{ env.LOAN_TOKEN }}
+          user: ${{ env.ZERO_ADDR }}
+
+      - name: Verify get-allowance
+        run: echo '${{ steps.get_allowance.outputs.result }}' | jq .
+
+      # ── Vault: Read ─────────────────────────────────────────────────
+
+      - name: list-vaults
+        uses: ./
+        id: list_vaults
+        with:
+          command: list-vaults
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          limit: "5"
+
+      - name: Verify list-vaults
+        run: echo '${{ steps.list_vaults.outputs.result }}' | jq -e 'length > 0'
+
+      - name: vault-info
+        uses: ./
+        id: vault_info
+        with:
+          command: vault-info
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          vault-address: ${{ env.VAULT }}
+
+      - name: Verify vault-info
+        run: echo '${{ steps.vault_info.outputs.result }}' | jq -e '.name'
+
+      - name: vault-balance
+        uses: ./
+        id: vault_balance
+        with:
+          command: vault-balance
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          vault-address: ${{ env.VAULT }}
+          user: ${{ env.ZERO_ADDR }}
+
+      - name: Verify vault-balance
+        run: echo '${{ steps.vault_balance.outputs.result }}' | jq .
+
+  write-operations:
+    name: Write operations (needs W3 signer)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Token helpers ───────────────────────────────────────────────
+
+      - name: approve (USDC for Morpho Blue)
+        uses: ./
+        id: approve
+        with:
+          command: approve
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          asset: ${{ env.LOAN_TOKEN }}
+          amount: "1000000"
+
+      - name: Verify approve
+        run: echo '${{ steps.approve.outputs.result }}' | jq .
+
+      - name: wrap-eth
+        uses: ./
+        id: wrap_eth
+        with:
+          command: wrap-eth
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          amount: "1000000000000000"
+
+      - name: Verify wrap-eth
+        run: echo '${{ steps.wrap_eth.outputs.result }}' | jq .
+
+      - name: unwrap-eth
+        uses: ./
+        id: unwrap_eth
+        with:
+          command: unwrap-eth
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          amount: "1000000000000000"
+
+      - name: Verify unwrap-eth
+        run: echo '${{ steps.unwrap_eth.outputs.result }}' | jq .
+
+      # ── Blue: Lending lifecycle ─────────────────────────────────────
+
+      - name: supply
+        uses: ./
+        id: supply
+        with:
+          command: supply
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          loan-token: ${{ env.LOAN_TOKEN }}
+          collateral-token: ${{ env.COLLATERAL_TOKEN }}
+          oracle: ${{ env.ORACLE }}
+          irm: ${{ env.IRM }}
+          lltv: ${{ env.LLTV }}
+          amount: "1000000"
+          on-behalf-of: ${{ secrets.W3_SIGNER_ADDRESS }}
+
+      - name: Verify supply
+        run: echo '${{ steps.supply.outputs.result }}' | jq .
+
+      - name: withdraw
+        uses: ./
+        id: withdraw
+        with:
+          command: withdraw
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          loan-token: ${{ env.LOAN_TOKEN }}
+          collateral-token: ${{ env.COLLATERAL_TOKEN }}
+          oracle: ${{ env.ORACLE }}
+          irm: ${{ env.IRM }}
+          lltv: ${{ env.LLTV }}
+          amount: "500000"
+          on-behalf-of: ${{ secrets.W3_SIGNER_ADDRESS }}
+
+      - name: Verify withdraw
+        run: echo '${{ steps.withdraw.outputs.result }}' | jq .
+
+      - name: supply-collateral
+        uses: ./
+        id: supply_collateral
+        with:
+          command: supply-collateral
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          loan-token: ${{ env.LOAN_TOKEN }}
+          collateral-token: ${{ env.COLLATERAL_TOKEN }}
+          oracle: ${{ env.ORACLE }}
+          irm: ${{ env.IRM }}
+          lltv: ${{ env.LLTV }}
+          amount: "1000000000000000"
+          on-behalf-of: ${{ secrets.W3_SIGNER_ADDRESS }}
+
+      - name: Verify supply-collateral
+        run: echo '${{ steps.supply_collateral.outputs.result }}' | jq .
+
+      - name: borrow
+        uses: ./
+        id: borrow
+        with:
+          command: borrow
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          loan-token: ${{ env.LOAN_TOKEN }}
+          collateral-token: ${{ env.COLLATERAL_TOKEN }}
+          oracle: ${{ env.ORACLE }}
+          irm: ${{ env.IRM }}
+          lltv: ${{ env.LLTV }}
+          amount: "100000"
+          on-behalf-of: ${{ secrets.W3_SIGNER_ADDRESS }}
+
+      - name: Verify borrow
+        run: echo '${{ steps.borrow.outputs.result }}' | jq .
+
+      - name: repay
+        uses: ./
+        id: repay
+        with:
+          command: repay
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          loan-token: ${{ env.LOAN_TOKEN }}
+          collateral-token: ${{ env.COLLATERAL_TOKEN }}
+          oracle: ${{ env.ORACLE }}
+          irm: ${{ env.IRM }}
+          lltv: ${{ env.LLTV }}
+          amount: "100000"
+          on-behalf-of: ${{ secrets.W3_SIGNER_ADDRESS }}
+
+      - name: Verify repay
+        run: echo '${{ steps.repay.outputs.result }}' | jq .
+
+      - name: withdraw-collateral
+        uses: ./
+        id: withdraw_collateral
+        with:
+          command: withdraw-collateral
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          loan-token: ${{ env.LOAN_TOKEN }}
+          collateral-token: ${{ env.COLLATERAL_TOKEN }}
+          oracle: ${{ env.ORACLE }}
+          irm: ${{ env.IRM }}
+          lltv: ${{ env.LLTV }}
+          amount: "1000000000000000"
+          on-behalf-of: ${{ secrets.W3_SIGNER_ADDRESS }}
+
+      - name: Verify withdraw-collateral
+        run: echo '${{ steps.withdraw_collateral.outputs.result }}' | jq .
+
+      # ── Blue: Interest and authorization ────────────────────────────
+
+      - name: accrue-interest
+        uses: ./
+        id: accrue_interest
+        with:
+          command: accrue-interest
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          loan-token: ${{ env.LOAN_TOKEN }}
+          collateral-token: ${{ env.COLLATERAL_TOKEN }}
+          oracle: ${{ env.ORACLE }}
+          irm: ${{ env.IRM }}
+          lltv: ${{ env.LLTV }}
+
+      - name: Verify accrue-interest
+        run: echo '${{ steps.accrue_interest.outputs.result }}' | jq .
+
+      - name: set-authorization
+        uses: ./
+        id: set_authorization
+        with:
+          command: set-authorization
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          authorized: "0x0000000000000000000000000000000000000001"
+          is-authorized: "false"
+
+      - name: Verify set-authorization
+        run: echo '${{ steps.set_authorization.outputs.result }}' | jq .
+
+      # SKIP: create-market requires unique market params not already registered;
+      # using existing params reverts with "market already created"
+      # - name: create-market
+      #   uses: ./
+      #   id: create_market
+      #   with:
+      #     command: create-market
+      #     network: base
+      #     rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+      #     loan-token: ${{ env.LOAN_TOKEN }}
+      #     collateral-token: ${{ env.COLLATERAL_TOKEN }}
+      #     oracle: ${{ env.ORACLE }}
+      #     irm: ${{ env.IRM }}
+      #     lltv: ${{ env.LLTV }}
+
+      # SKIP: liquidate requires an underwater position (health factor < 1)
+      # which cannot be reliably created in E2E without price manipulation
+      # - name: liquidate
+      #   uses: ./
+      #   id: liquidate
+      #   with:
+      #     command: liquidate
+      #     network: base
+      #     rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+      #     loan-token: ${{ env.LOAN_TOKEN }}
+      #     collateral-token: ${{ env.COLLATERAL_TOKEN }}
+      #     oracle: ${{ env.ORACLE }}
+      #     irm: ${{ env.IRM }}
+      #     lltv: ${{ env.LLTV }}
+      #     borrower: "0x..."
+      #     seized-assets: "1000"
+
+      # ── Vault: Write ────────────────────────────────────────────────
+
+      - name: vault-deposit
+        uses: ./
+        id: vault_deposit
+        with:
+          command: vault-deposit
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          vault-address: ${{ env.VAULT }}
+          amount: "500000"
+          receiver: ${{ secrets.W3_SIGNER_ADDRESS }}
+
+      - name: Verify vault-deposit
+        run: echo '${{ steps.vault_deposit.outputs.result }}' | jq .
+
+      - name: vault-withdraw
+        uses: ./
+        id: vault_withdraw
+        with:
+          command: vault-withdraw
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          vault-address: ${{ env.VAULT }}
+          amount: "250000"
+          receiver: ${{ secrets.W3_SIGNER_ADDRESS }}
+
+      - name: Verify vault-withdraw
+        run: echo '${{ steps.vault_withdraw.outputs.result }}' | jq .
+
+      - name: vault-redeem
+        uses: ./
+        id: vault_redeem
+        with:
+          command: vault-redeem
+          network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
+          vault-address: ${{ env.VAULT }}
+          shares: "250000"
+          receiver: ${{ secrets.W3_SIGNER_ADDRESS }}
+
+      - name: Verify vault-redeem
+        run: echo '${{ steps.vault_redeem.outputs.result }}' | jq .
+
+      - name: Summary
+        run: |
+          echo "### Morpho Action Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Read (8):** list-markets, get-market, get-market-params, get-position, get-allowance, list-vaults, vault-info, vault-balance" >> $GITHUB_STEP_SUMMARY
+          echo "**Write (13):** approve, wrap-eth, unwrap-eth, supply, withdraw, supply-collateral, withdraw-collateral, borrow, repay, accrue-interest, set-authorization, vault-deposit, vault-withdraw, vault-redeem" >> $GITHUB_STEP_SUMMARY
+          echo "**Skipped (2):**" >> $GITHUB_STEP_SUMMARY
+          echo "- create-market: requires unique params not already registered" >> $GITHUB_STEP_SUMMARY
+          echo "- liquidate: requires underwater position" >> $GITHUB_STEP_SUMMARY

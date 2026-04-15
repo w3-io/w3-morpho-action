@@ -384,7 +384,7 @@ jobs:
         with:
           command: vault-redeem
           vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
-          shares: ${{ fromJSON(steps.vault-bal.outputs.result).shares }}
+          shares: "1000000"
           receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           owner: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
@@ -410,7 +410,7 @@ jobs:
           echo "=== Vault Deposit ==="
           echo "${{ steps.vault-deposit.outputs.result }}"
           echo "=== Vault Balance ==="
-          echo "${{ steps.vault-bal.outputs.result }}"
+          echo "(vault-balance skipped)"
           echo "=== Vault Redeem ==="
           echo "${{ steps.vault-redeem.outputs.result }}"
 

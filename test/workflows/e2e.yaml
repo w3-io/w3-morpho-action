@@ -210,7 +210,7 @@ jobs:
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
-      # 4. Borrow USDC against collateral
+      # 4. Borrow USDC against collateral (small amount to stay within LTV)
       - uses: w3-io/w3-morpho-action@main
         id: borrow
         env:
@@ -224,7 +224,7 @@ jobs:
           oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
           irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
           lltv: '860000000000000000'
-          amount: '1000'
+          amount: '10'
           on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
@@ -257,7 +257,7 @@ jobs:
           oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
           irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
           lltv: '860000000000000000'
-          amount: '1000'
+          amount: '10'
           on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}

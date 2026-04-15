@@ -9,8 +9,8 @@
 # Prerequisites:
 #   - W3 local network running (make dev)
 #   - W3_SECRET_ETHEREUM (bridge signer with ETH + USDC on Base)
-#   - W3_SECRET_BASE_RPC_URL (recommended: private RPC to avoid 429s
-#     on Base public RPC). Pass as rpc-url input on each step.
+#   - ALCHEMY_BASE_RPC (required: private RPC to avoid 429s on Base
+#     public RPC). Each step passes rpc-url from this secret.
 #
 # Addresses (Base mainnet):
 #   Morpho Blue: 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb
@@ -37,6 +37,7 @@ jobs:
           command: get-market
           market-id: '0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # get-market-params
       - uses: w3-io/w3-morpho-action@main
@@ -45,6 +46,7 @@ jobs:
           command: get-market-params
           market-id: '0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # list-markets
       - uses: w3-io/w3-morpho-action@main
@@ -52,6 +54,7 @@ jobs:
         with:
           command: list-markets
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
           limit: '5'
 
       # get-position
@@ -62,6 +65,7 @@ jobs:
           market-id: '0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda'
           user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # get-allowance
       - uses: w3-io/w3-morpho-action@main
@@ -71,6 +75,7 @@ jobs:
           asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
           user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # list-vaults
       - uses: w3-io/w3-morpho-action@main
@@ -78,6 +83,7 @@ jobs:
         with:
           command: list-vaults
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
           limit: '5'
 
       # vault-info
@@ -87,6 +93,7 @@ jobs:
           command: vault-info
           vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # vault-balance
       - uses: w3-io/w3-morpho-action@main
@@ -96,6 +103,7 @@ jobs:
           vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
           user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       - run: |
           echo "=== Get Market ==="
@@ -130,6 +138,7 @@ jobs:
           command: wrap-eth
           amount: '10000000000000'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # unwrap-eth
       - uses: w3-io/w3-morpho-action@main
@@ -142,6 +151,7 @@ jobs:
           command: unwrap-eth
           amount: '10000000000000'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       - run: |
           echo "=== Wrap ETH ==="
@@ -165,6 +175,7 @@ jobs:
           command: wrap-eth
           amount: '50000000000000'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 2. Approve WETH for Morpho Blue
       - uses: w3-io/w3-morpho-action@main
@@ -178,6 +189,7 @@ jobs:
           asset: '0x4200000000000000000000000000000000000006'
           amount: '50000000000000'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 3. Supply WETH as collateral
       - uses: w3-io/w3-morpho-action@main
@@ -196,6 +208,7 @@ jobs:
           amount: '50000000000000'
           on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 4. Borrow USDC against collateral
       - uses: w3-io/w3-morpho-action@main
@@ -214,6 +227,7 @@ jobs:
           amount: '1000'
           on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 5. Approve USDC for repay
       - uses: w3-io/w3-morpho-action@main
@@ -227,6 +241,7 @@ jobs:
           asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
           amount: '10000'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 6. Repay borrowed USDC
       - uses: w3-io/w3-morpho-action@main
@@ -245,6 +260,7 @@ jobs:
           amount: '1000'
           on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 7. Withdraw collateral
       - uses: w3-io/w3-morpho-action@main
@@ -263,6 +279,7 @@ jobs:
           amount: '50000000000000'
           on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 8. Accrue interest on the market
       - uses: w3-io/w3-morpho-action@main
@@ -279,6 +296,7 @@ jobs:
           irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
           lltv: '860000000000000000'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 9. Recovery: unwrap WETH back to ETH
       - uses: w3-io/w3-morpho-action@main
@@ -291,6 +309,7 @@ jobs:
           command: unwrap-eth
           amount: '50000000000000'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       - run: |
           echo "=== Wrap ==="
@@ -327,6 +346,7 @@ jobs:
           spender: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
           amount: '10000'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 2. Deposit into vault
       - uses: w3-io/w3-morpho-action@main
@@ -341,6 +361,7 @@ jobs:
           amount: '10000'
           receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 3. Check vault balance
       - uses: w3-io/w3-morpho-action@main
@@ -350,6 +371,7 @@ jobs:
           vault-address: '0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2'
           user: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 4. Redeem shares from vault
       - uses: w3-io/w3-morpho-action@main
@@ -365,6 +387,7 @@ jobs:
           receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           owner: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 5. Withdraw from vault (alternative to redeem)
       # - uses: w3-io/w3-morpho-action@main
@@ -406,6 +429,7 @@ jobs:
           asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
           amount: '10000'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 2. Supply USDC to the market
       - uses: w3-io/w3-morpho-action@main
@@ -424,6 +448,7 @@ jobs:
           amount: '10000'
           on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       # 3. Withdraw supplied USDC
       - uses: w3-io/w3-morpho-action@main
@@ -443,6 +468,7 @@ jobs:
           on-behalf-of: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           receiver: '0xe4E402962943c4EB2253f666575eE12700e78e90'
           network: base
+          rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
       - run: |
           echo "=== Approve ==="

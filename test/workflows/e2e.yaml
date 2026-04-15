@@ -9,6 +9,8 @@
 # Prerequisites:
 #   - W3 local network running (make dev)
 #   - W3_SECRET_ETHEREUM (bridge signer with ETH + USDC on Base)
+#   - W3_SECRET_BASE_RPC_URL (recommended: private RPC to avoid 429s
+#     on Base public RPC). Pass as rpc-url input on each step.
 #
 # Addresses (Base mainnet):
 #   Morpho Blue: 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb
@@ -271,7 +273,11 @@ jobs:
           - ethereum/call-contract
         with:
           command: accrue-interest
-          market-id: '0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda'
+          loan-token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+          collateral-token: '0x4200000000000000000000000000000000000006'
+          oracle: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+          irm: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+          lltv: '860000000000000000'
           network: base
 
       # 9. Recovery: unwrap WETH back to ETH

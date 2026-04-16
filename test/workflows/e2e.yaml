@@ -449,7 +449,10 @@ jobs:
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
 
-      # SKIP: withdraw requires premium RPC to avoid rate limits
+      # SKIP: withdraw passes with ALCHEMY_BASE_RPC but is commented out
+      # to avoid 429 rate limits on the free Alchemy tier. The supply step
+      # above already locks funds; withdraw would recover them. Uncomment
+      # when a paid-tier RPC URL is available in secrets.ALCHEMY_BASE_RPC.
       # - uses: w3-io/w3-morpho-action@main
       #   id: withdraw
       #   env:

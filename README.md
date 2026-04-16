@@ -56,6 +56,20 @@ Ethereum, Base, Arbitrum, Polygon, Optimism.
 
 Morpho Blue uses the same contract address on all chains: `0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb` (CREATE2 deterministic deployment).
 
+## Authentication
+
+Self-custody only. Reads need nothing; writes are signed by the W3
+bridge using its configured signer.
+
+| Operation | Needs                                                                                                                                            |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Reads     | Nothing. `list-markets`, `get-market`, `vault-info`, etc. work against the public Morpho GraphQL API + on-chain reads.                           |
+| Writes    | A funded signer key on the bridge (typically via `W3_BRIDGE_SIGNER_ETHEREUM`). The signer's address is what populates `on-behalf-of` downstream. |
+
+For local development, start a bridge with `w3 bridge serve
+--signer-ethereum $W3_SECRET_ETHEREUM --allow '*' --port 8232` and
+point actions at it via `W3_BRIDGE_URL=http://host.docker.internal:8232`.
+
 ## Architecture
 
 All on-chain operations go through the W3 bridge. No private keys in the action container.

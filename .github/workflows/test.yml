@@ -9,13 +9,13 @@ on:
 # Vault: Steakhouse USDC (0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB)
 env:
   # Base USDC/WETH market params from README
-  LOAN_TOKEN: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-  COLLATERAL_TOKEN: "0x4200000000000000000000000000000000000006"
-  ORACLE: "0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4"
-  IRM: "0x46415998764C29aB2a25CbeA6254146D50D22687"
-  LLTV: "860000000000000000"
-  VAULT: "0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB"
-  ZERO_ADDR: "0x0000000000000000000000000000000000000000"
+  LOAN_TOKEN: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+  COLLATERAL_TOKEN: '0x4200000000000000000000000000000000000006'
+  ORACLE: '0xFEa2D58cEfCb9fcb597723c6bAE66fFE4193aFE4'
+  IRM: '0x46415998764C29aB2a25CbeA6254146D50D22687'
+  LLTV: '860000000000000000'
+  VAULT: '0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB'
+  ZERO_ADDR: '0x0000000000000000000000000000000000000000'
 
 jobs:
   read-operations:
@@ -33,7 +33,7 @@ jobs:
           command: list-markets
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
-          limit: "5"
+          limit: '5'
 
       - name: Verify list-markets
         run: echo '${{ steps.list_markets.outputs.result }}' | jq -e 'length > 0'
@@ -103,7 +103,7 @@ jobs:
           command: list-vaults
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
-          limit: "5"
+          limit: '5'
 
       - name: Verify list-vaults
         run: echo '${{ steps.list_vaults.outputs.result }}' | jq -e 'length > 0'
@@ -149,7 +149,7 @@ jobs:
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
           asset: ${{ env.LOAN_TOKEN }}
-          amount: "1000000"
+          amount: '1000000'
 
       - name: Verify approve
         run: echo '${{ steps.approve.outputs.result }}' | jq .
@@ -161,7 +161,7 @@ jobs:
           command: wrap-eth
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
-          amount: "1000000000000000"
+          amount: '1000000000000000'
 
       - name: Verify wrap-eth
         run: echo '${{ steps.wrap_eth.outputs.result }}' | jq .
@@ -173,7 +173,7 @@ jobs:
           command: unwrap-eth
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
-          amount: "1000000000000000"
+          amount: '1000000000000000'
 
       - name: Verify unwrap-eth
         run: echo '${{ steps.unwrap_eth.outputs.result }}' | jq .
@@ -192,7 +192,7 @@ jobs:
           oracle: ${{ env.ORACLE }}
           irm: ${{ env.IRM }}
           lltv: ${{ env.LLTV }}
-          amount: "1000000"
+          amount: '1000000'
           on-behalf-of: ${{ secrets.W3_SIGNER_ADDRESS }}
 
       - name: Verify supply
@@ -210,7 +210,7 @@ jobs:
           oracle: ${{ env.ORACLE }}
           irm: ${{ env.IRM }}
           lltv: ${{ env.LLTV }}
-          amount: "500000"
+          amount: '500000'
           on-behalf-of: ${{ secrets.W3_SIGNER_ADDRESS }}
 
       - name: Verify withdraw
@@ -228,7 +228,7 @@ jobs:
           oracle: ${{ env.ORACLE }}
           irm: ${{ env.IRM }}
           lltv: ${{ env.LLTV }}
-          amount: "1000000000000000"
+          amount: '1000000000000000'
           on-behalf-of: ${{ secrets.W3_SIGNER_ADDRESS }}
 
       - name: Verify supply-collateral
@@ -246,7 +246,7 @@ jobs:
           oracle: ${{ env.ORACLE }}
           irm: ${{ env.IRM }}
           lltv: ${{ env.LLTV }}
-          amount: "100000"
+          amount: '100000'
           on-behalf-of: ${{ secrets.W3_SIGNER_ADDRESS }}
 
       - name: Verify borrow
@@ -264,7 +264,7 @@ jobs:
           oracle: ${{ env.ORACLE }}
           irm: ${{ env.IRM }}
           lltv: ${{ env.LLTV }}
-          amount: "100000"
+          amount: '100000'
           on-behalf-of: ${{ secrets.W3_SIGNER_ADDRESS }}
 
       - name: Verify repay
@@ -282,7 +282,7 @@ jobs:
           oracle: ${{ env.ORACLE }}
           irm: ${{ env.IRM }}
           lltv: ${{ env.LLTV }}
-          amount: "1000000000000000"
+          amount: '1000000000000000'
           on-behalf-of: ${{ secrets.W3_SIGNER_ADDRESS }}
 
       - name: Verify withdraw-collateral
@@ -313,8 +313,8 @@ jobs:
           command: set-authorization
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
-          authorized: "0x0000000000000000000000000000000000000001"
-          is-authorized: "false"
+          authorized: '0x0000000000000000000000000000000000000001'
+          is-authorized: 'false'
 
       - name: Verify set-authorization
         run: echo '${{ steps.set_authorization.outputs.result }}' | jq .
@@ -361,7 +361,7 @@ jobs:
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
           vault-address: ${{ env.VAULT }}
-          amount: "500000"
+          amount: '500000'
           receiver: ${{ secrets.W3_SIGNER_ADDRESS }}
 
       - name: Verify vault-deposit
@@ -375,7 +375,7 @@ jobs:
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
           vault-address: ${{ env.VAULT }}
-          amount: "250000"
+          amount: '250000'
           receiver: ${{ secrets.W3_SIGNER_ADDRESS }}
 
       - name: Verify vault-withdraw
@@ -389,7 +389,7 @@ jobs:
           network: base
           rpc-url: ${{ secrets.ALCHEMY_BASE_RPC }}
           vault-address: ${{ env.VAULT }}
-          shares: "250000"
+          shares: '250000'
           receiver: ${{ secrets.W3_SIGNER_ADDRESS }}
 
       - name: Verify vault-redeem

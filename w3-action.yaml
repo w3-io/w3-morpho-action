@@ -3,7 +3,17 @@ partner: morpho
 name: Morpho Blue Integration
 version: 0.1.0
 repo: w3-io/w3-morpho-action
-
+description: >
+  Morpho Blue permissionless lending across isolated markets on
+  Ethereum and Base. Supply, borrow, and manage positions in any
+  ERC-20 market. Supports MetaMorpho vaults for passive yield.
+context: >
+  Use Morpho when the workflow needs lending with isolated risk —
+  each market is independent, so a bad collateral asset can't
+  cascade. For pooled lending (shared risk, more liquidity), use
+  Aave instead. All on-chain operations go through the W3 bridge.
+  Requires ALCHEMY_BASE_RPC for Base network access. Typical:
+  supply → borrow → repay → withdraw.
 commands:
   # ── Blue: Market reads ────────────────────────────────────────────
 

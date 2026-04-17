@@ -319,6 +319,109 @@ Redeem vault shares for assets (share-denominated withdrawal).
 
 ---
 
+## End-to-end example: discover, supply, monitor, redeem
+
+A complete vault workflow from discovery to exit. This uses Base
+with USDC and the Steakhouse Prime vault as a concrete example.
+
+### 1. Discover vaults
+
+Find vaults sorted by total deposits:
+
+```yaml
+- name: List available vaults
+  command: list-vaults
+  inputs:
+    network: base
+    limit: 10
+```
+
+Pick a vault from the results. For this walkthrough we use the
+Steakhouse Prime USDC vault at `0xBEEF...` (replace with the
+actual address from `list-vaults` output).
+
+### 2. Inspect the vault
+
+```yaml
+- name: Get vault metadata
+  command: vault-info
+  inputs:
+    vault-address: '0xBEEF...'
+    network: base
+```
+
+Note the `asset` field in the response — that is the token you
+need to approve and deposit (USDC in this case).
+
+### 3. Approve the underlying token
+
+The vault needs permission to pull USDC from your wallet:
+
+```yaml
+- name: Approve USDC for the vault
+  command: approve
+  inputs:
+    asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' # USDC on Base
+    amount: '1000000' # 1 USDC (6 decimals)
+    spender: '0xBEEF...' # vault address
+    network: base
+```
+
+### 4. Deposit into the vault
+
+```yaml
+- name: Deposit USDC
+  command: vault-deposit
+  inputs:
+    vault-address: '0xBEEF...'
+    amount: '1000000'
+    receiver: '0xYOUR_ADDRESS'
+    network: base
+```
+
+### 5. Monitor your position
+
+Check your share balance and its current asset value at any time:
+
+```yaml
+- name: Check vault position
+  command: vault-balance
+  inputs:
+    vault-address: '0xBEEF...'
+    user: '0xYOUR_ADDRESS'
+    network: base
+```
+
+The `assets` field shows how much USDC your shares are currently
+worth. As the vault earns yield this value grows relative to your
+original deposit.
+
+### 6. Redeem shares to exit
+
+When you are ready to withdraw, redeem all shares returned by
+`vault-balance`:
+
+```yaml
+- name: Redeem vault shares
+  command: vault-redeem
+  inputs:
+    vault-address: '0xBEEF...'
+    shares: '999500' # shares value from vault-balance
+    receiver: '0xYOUR_ADDRESS'
+    network: base
+```
+
+The vault burns your shares and transfers the equivalent USDC
+(including any accrued yield) back to the receiver address.
+
+> **Why `vault-redeem` instead of `vault-withdraw`?** Both exit
+> the vault. `vault-redeem` specifies how many shares to burn
+> (the ERC-4626 standard method); `vault-withdraw` specifies how
+> many underlying assets you want. Redeeming all shares is the
+> simplest way to fully exit a position.
+
+---
+
 ## Testing
 
 ### Bridge-verified commands (23 of 24)

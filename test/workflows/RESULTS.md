@@ -53,9 +53,9 @@ Funded EVM wallet on Base with ETH + USDC.
 
 ## Skipped Commands
 
-| Command          | Reason                                         |
-| ---------------- | ---------------------------------------------- |
-| `vault-withdraw` | Alternative to redeem; tested via vault-redeem |
+| Command          | Reason                                                                                                                                                                                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vault-withdraw` | Redundant with `vault-redeem`. Both withdraw assets from the vault; the only difference is denomination (`vault-withdraw` specifies the underlying-asset amount, `vault-redeem` specifies the share amount). `vault-redeem` is the standard ERC-4626 approach. |
 
 ## How to run
 

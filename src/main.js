@@ -253,7 +253,7 @@ const handlers = {
   'set-authorization': async () => {
     const result = await setAuthorization({
       authorized: core.getInput('authorized', { required: true }),
-      isAuthorized: core.getInput('is-authorized') !== 'false',
+      isAuthorized: core.getInput('is-authorized') === 'true',
       network: core.getInput('network', { required: true }),
       rpcUrl: rpcUrl(),
     })
